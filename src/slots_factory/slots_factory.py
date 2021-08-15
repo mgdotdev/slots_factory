@@ -29,28 +29,26 @@ def _type_factory(_name="SlotsObject", *args):
 
 
 def slots_factory(_name="SlotsObject", **kwargs):
-    stores = slots_factory.__dict__
-    _id = _slots_factory_hash(_name, kwargs)
-    type_ = stores.get(_id)
+    id_ = _slots_factory_hash(_name, kwargs)
+    type_ = slots_factory.__dict__.get(id_)
     if not type_:
         type_ = _type_factory(_name, *kwargs.keys())
-        stores[_id] = type_
+        slots_factory.__dict__[id_] = type_
     instance = type_()
     _slots_factory_setattrs(instance, kwargs)
     return instance
 
 
 def fast_slots(_name="SlotsObject", **kwargs):
-    stores = fast_slots.__dict__
-    type_ = stores.get(_name)
+    type_ = fast_slots.__dict__.get(_name)
     if not type_:
         type_ = _type_factory(_name, *kwargs.keys())
-        stores[_name] = type_
+        fast_slots.__dict__[_name] = type_
     try:
         instance = type_()
         _slots_factory_setattrs(instance, kwargs)
         return instance
     except Exception:
-        del stores[_name]
+        del fast_slots.__dict__[_name]
         return fast_slots(_name, **kwargs)
 

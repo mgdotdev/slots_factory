@@ -1,8 +1,8 @@
 slot_factory 
 ===
 
-A factory function for creating slot objects
----
+## Factory functions for creating slot objects
+
 Slots are a python construct that allows users to create an object that doesn't contain `__dict__` or `__weakref__` attributes. The benefit to a slots object is that it has faster attribute access and it saves on memory use, which make slots objects ideal for when you have lots of instances of a single python object.
 
 I've never been a huge fan of the syntax though, as it requires repetitive code for definition as well as instantiation. **yuck.**
@@ -71,7 +71,7 @@ In [12]: this
 Out[12]: SlotsObject(x=4, y=2, z=3)
 ```
 
-The type identification and attribute setting is all done in C, in attempt to make instantiation as fast as possible. Instantiation of a `SlotObject` is about 60% slower than the instantiation of a `namedtuple` (mainly because it handles type definitions internally). Attribute access is on par however, and faster than a normal object as expected.
+The type identification and attribute setting is all done in C, in attempt to make instantiation as fast as possible. Instantiation of a `SlotObject` is about 80% slower than the instantiation of a `namedtuple` (mainly because it handles type definitions internally). Attribute access is on par however, and faster than a normal object as expected.
 
 ```python
 In [13]: from collections import namedtuple
