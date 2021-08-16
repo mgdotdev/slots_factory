@@ -42,5 +42,5 @@ setup(
     tests_require=[
         "pytest"
     ],
-    version="0.0.3",
+    version="0.0.4",
 )

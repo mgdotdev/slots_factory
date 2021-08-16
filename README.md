@@ -8,9 +8,9 @@ Slots are a python construct that allows users to create an object that doesn't 
 I've never been a huge fan of the syntax though, as it requires repetitive code for definition as well as instantiation. **yuck.**
 
 ```python
-class SlotObject:
+class SlotsObject:
     __slots__ = ('x', 'y', 'z')
-    def __init__(x, y, z): -> None
+    def __init__(self, x, y, z):
         self.x = x
         self.y = y
         self.z = z
