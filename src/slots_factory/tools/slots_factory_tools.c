@@ -38,7 +38,7 @@ static PyObject* _slots_factory_hash(PyObject *self, PyObject *args) {
         );
         unsigned char *key = PyBytes_AsString(encoded_key);
         unsigned long key_hash = hash(key);
-        _hash = _hash & key_hash;
+        _hash = _hash ^ key_hash;
     }
 
     return PyLong_FromUnsignedLong(_hash);
