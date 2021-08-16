@@ -7,7 +7,7 @@ from slots_factory import (
     type_factory,
 )
 
-from slots_factory.slots_factory import _type_factory
+
 from slots_factory.tools.SlotsFactoryTools import (
     _slots_factory_hash,
     _slots_factory_setattrs
@@ -16,7 +16,7 @@ from slots_factory.tools.SlotsFactoryTools import (
 
 @pytest.fixture(scope='session')
 def type_():
-    _type = _type_factory('SlotsObject', 'a', 'b', 'c')
+    _type = type_factory('SlotsObject', ('a', 'b', 'c'))
     yield _type
 
 

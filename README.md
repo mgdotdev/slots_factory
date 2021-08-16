@@ -22,9 +22,11 @@ class SlotObject:
         return f"SlotsObject({contents})"
 ```
 
-For funsies, I wanted to see if I could create a different way to instantiate these objects, with less jargon. Something like `collections.namedtuple`, but again without redundant definitions and with the benefits of `__slots__`.
+For funsies, I wanted to see if I could create a different way to instantiate these objects, with less jargon. Something like `collections.namedtuple`, but again without redundant definitions and with the benefits of `__slots__`. This repo is the results of such endeavor.
 
-The result of that endeavor is a factory function, `slots_factory`. Simply import the function, and all **kwargs are assigned as attributes to an instance of a slots object. Type definitions are handled internally by the function, so successive calls to `slots_function` with the same `_name` and `**kwargs` keys will return new instances of the same type.
+### `slots_factory()`
+
+The first factory function made available is `slots_factory`. Simply import the function, and all **kwargs are assigned as attributes to an instance of a slots object. Type definitions are handled internally by the function, so successive calls to `slots_factory` with the same `_name` and `**kwargs` keys will return new instances of the same type.
 
 For example:
 
@@ -92,7 +94,9 @@ In [18]: %timeit that.c
 %time
 ```
 
-There's also a second factory function, `fast_slots`, which is, obviously, faster. Instead of using the builtin hashing algorithm to generate an ID, it simply uses the object name and assumes that all objects named the same, are the same. Since it skips the hashing step, it builds slot instances faster.
+### `fast_slots()`
+
+There's a second factory function, `fast_slots`, which is, obviously, faster. Instead of using the builtin hashing algorithm to generate an ID, it simply uses the object name and assumes that all objects named the same, are the same. Since it skips the hashing step, it builds slot instances much faster.
 
 ```python
 In [5]: %timeit that = fast_slots('that', x=1,y=2,z=3,a=4,b=5,c=6)
@@ -113,6 +117,8 @@ category = fast_slots('category', id=1, name='category 1')
 category = fast_slots('category', id=2, name='category 2')
 ```
 
+### `type_factory()`
+
 Finally, if we're really craving the speeds, the most efficient way to use this module is to individually define your types and then manually spin up instances of these objects. This can be done by importing the `type_factory` and `slots_from_type` functions. 
 
 ```python
@@ -127,4 +133,15 @@ In [6]: %timeit instance = slots_from_type(type_, x=1, y=2, z=3, a=4, b=5, c=6)
 521 ns ± 2.73 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
 ```
 
-This is essentially equivalent to the use of a `namedtuple`, but without it's `count` and `index` methods, and with dynamic attributes. Also, all of that redundant typing is back... `¯\_(ツ)_/¯`
+`slots_from_type` is a convenience function; you can also instantiate your own instance and then pass it through the underlying `_slots_factory_setattrs` function, which is what actually populates the attributes.
+
+```python
+from slots_factory import type_factory
+from slots_factory.tools.SlotsFactoryTools import _slots_factory_setattrs
+
+my_type = type_factory("SlotsObject", ['x', 'y', 'z', 'a', 'b', 'c'])
+instance = my_type()
+_slots_factory_setattrs(my_type, {'x': 1, 'y': 2, 'z': 3, 'a': 4, 'b': 5, 'c': 6})
+```
+
+Using the `type_factory` is essentially equivalent to the use of a `namedtuple`, but without it's `count` and `index` methods, and with dynamic attributes. Also, all of that redundant typing is back... `¯\_(ツ)_/¯`
