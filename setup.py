@@ -22,6 +22,8 @@ setup(
         "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
         "Operating System :: POSIX :: Linux",
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Topic :: Software Development :: Libraries :: Python Modules",
@@ -29,7 +31,9 @@ setup(
     ext_modules=extensions,
     extras_require={'test': ['pytest']},
     include_package_data=True,
+    license="LGPLv3",
     long_description_content_type="text/markdown",
+    long_description=long_description,
     name="slots_factory",
     packages=find_packages(where="src"),
     package_data={"": ['*.txt']},
@@ -38,5 +42,5 @@ setup(
     tests_require=[
         "pytest"
     ],
-    version="0.0.1",
+    version="0.0.3",
 )
