@@ -99,6 +99,8 @@ In [18]: %timeit that.c
 There's a second factory function, `fast_slots`, which is, obviously, faster. Instead of using the builtin hashing algorithm to generate an ID, it simply uses the object name and assumes that all objects named the same, are the same. Since it skips the hashing step, it builds slot instances much faster.
 
 ```python
+In [4]: from slots_factory import fast_slots
+
 In [5]: %timeit that = fast_slots('that', x=1,y=2,z=3,a=4,b=5,c=6)
 579 ns ± 4.64 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
 ```

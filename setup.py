@@ -42,5 +42,6 @@ setup(
     tests_require=[
         "pytest"
     ],
-    version="0.0.4",
+    url="https://github.com/1mikegrn/slots_factory"
+    version="0.0.5",
 )
