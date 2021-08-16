@@ -2,6 +2,8 @@ __pycache__/
 build/
 dist/
 venv/
+.pytest_cache/
+.tox/
 
 src/*.egg-info
 *.so

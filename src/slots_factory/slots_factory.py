@@ -1,6 +1,6 @@
 from slots_factory.tools.SlotsFactoryTools import (
-    _slots_factory_hash, 
-    _slots_factory_setattrs
+    _slots_factory_hash,
+    _slots_factory_setattrs,
 )
 
 
@@ -30,16 +30,12 @@ def type_factory(_name, args):
     :return: type definition defined by function arguments
     :rtype: type
     """
+
     def __repr__(self):
-        contents = ", ".join(
-            [f"{key}={getattr(self, key)}" for key in self.__slots__]
-        )
+        contents = ", ".join([f"{key}={getattr(self, key)}" for key in self.__slots__])
         return f"{self.__class__.__name__}({contents})"
-    type_ = type(
-        _name,
-        (),
-        {"__slots__": args, "__repr__": __repr__}
-    )
+
+    type_ = type(_name, (), {"__slots__": args, "__repr__": __repr__})
     return type_
 
 
@@ -87,4 +83,3 @@ def fast_slots(_name="SlotsObject", **kwargs):
     except AttributeError:
         del fast_slots.__dict__[_name]
         return fast_slots(_name, **kwargs)
-
