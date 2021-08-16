@@ -48,7 +48,7 @@ def fast_slots(_name="SlotsObject", **kwargs):
         instance = type_()
         _slots_factory_setattrs(instance, kwargs)
         return instance
-    except Exception:
+    except AttributeError:
         del fast_slots.__dict__[_name]
         return fast_slots(_name, **kwargs)
 

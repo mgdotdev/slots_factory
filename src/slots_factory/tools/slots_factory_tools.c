@@ -55,7 +55,7 @@ static PyObject* _slots_factory_setattrs(PyObject *self, PyObject *args) {
 
     PyObject *__slots__ = PyObject_GetAttrString(instance, "__slots__");
     if (PyObject_Length(__slots__) != PyObject_Length(kwargs)) {
-        return NULL;
+        return PyErr_Format(PyExc_AttributeError, "Mismatch in number of attributes");
     }
 
     PyObject *key, *value;

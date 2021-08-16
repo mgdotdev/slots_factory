@@ -32,6 +32,13 @@ class TestTools:
         _slots_factory_setattrs(instance, mapping)
         assert all(getattr(instance, key) == value for key, value in mapping.items())
         
+    def test_attr_error(self, type_):
+        instance = type_()
+        with pytest.raises(AttributeError) as e:
+            _slots_factory_setattrs(instance, {'a': 1, 'b': 2})
+        assert e.type == AttributeError
+        assert e.value.args == ('Mismatch in number of attributes',)
+
 
 class TestSlotsFactory:
     def test_slots_factory(self):
