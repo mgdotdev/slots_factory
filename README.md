@@ -127,4 +127,4 @@ In [6]: %timeit instance = slots_from_type(type_, x=1, y=2, z=3, a=4, b=5, c=6)
 521 ns ± 2.73 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
 ```
 
-This is essentially equivalent to the use of a `namedtuple`, but without it's `count` and `index` methods, and with dynamic attributes. Also, all of redundant typing is back... `¯\_(ツ)_/¯`
+This is essentially equivalent to the use of a `namedtuple`, but without it's `count` and `index` methods, and with dynamic attributes. Also, all of that redundant typing is back... `¯\_(ツ)_/¯`
