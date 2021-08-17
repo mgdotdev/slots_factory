@@ -25,7 +25,7 @@ class SlotsObject:
 For funsies, I wanted to see if I could create a different way to instantiate these objects, with less jargon. Something like `collections.namedtuple`, but again without redundant definitions and with the benefits of `__slots__`. This repo is the results of such endeavor.
 
 
-(TL;DR - the [`@dataslots`](#@dataslots) decorator ends up being the most useful implementation, free to skip to it if you want to see the fireworks.)
+(TL;DR - the [`@dataslots`](#dataslots) decorator ends up being the most useful implementation, free to skip to it if you want to see the fireworks.)
 
 
 ### `slots_factory()`
