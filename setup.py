@@ -29,19 +29,17 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     ext_modules=extensions,
-    extras_require={'test': ['pytest']},
+    extras_require={"test": ["pytest"]},
     include_package_data=True,
     license="LGPLv3",
     long_description_content_type="text/markdown",
     long_description=long_description,
     name="slots_factory",
     packages=find_packages(where="src"),
-    package_data={"": ['*.txt']},
+    package_data={"": ["*.txt"]},
     package_dir={"": "src"},
     python_requires=">=3.6",
-    tests_require=[
-        "pytest"
-    ],
+    tests_require=["pytest"],
     url="https://github.com/1mikegrn/slots_factory",
-    version="0.0.6",
+    version="0.0.7",
 )

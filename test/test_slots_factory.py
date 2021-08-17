@@ -1,11 +1,11 @@
 import pytest
 
 from slots_factory import (
-    slots_factory, 
-    fast_slots, 
-    slots_from_type, 
-    type_factory, 
-    dataslots
+    slots_factory,
+    fast_slots,
+    slots_from_type,
+    type_factory,
+    dataslots,
 )
 
 
@@ -21,11 +21,12 @@ def type_():
     yield _type
 
 
-@pytest.fixture(scope='class')
+@pytest.fixture(scope="class")
 def ds():
     @dataslots
     class This:
         """Docstrings"""
+
         x: int
         y: int
         z: int
@@ -162,6 +163,24 @@ class TestDataSlots:
         that = That()
         assert ds != that
 
+    def test_sorting(self):
+        @dataslots(order=True)
+        class This:
+            x: int
+            y: int
+            z: int
+
+        one = This(x=1, y=2, z=3)
+        two = This(x=1, y=0, z=4)
+        three = This(x=2, y=1, z=0)
+
+        list_ = [one, two, three]
+        list_.sort()
+        actual = [[getattr(item, attr) for attr in ("x", "y", "z")] for item in list_]
+        expected = [[2, 1, 0], [1, 0, 4], [1, 2, 3]]
+        assert actual == expected
+
+
 class TestDataSlotsOptions:
     def test_frozen(self):
         @dataslots(frozen=True)
@@ -176,7 +195,7 @@ class TestDataSlotsOptions:
 
         assert e.type == AttributeError
         assert e.value.args == ("Instance is immutable.",)
-    
+
     def test_order_true(self):
         @dataslots(order=True)
         class This:
@@ -185,10 +204,10 @@ class TestDataSlotsOptions:
             z: int
 
         this = This(x=1, y=2, z=3)
-        assert [x for x in this] == [1, 2, 3]     
+        assert [x for x in this] == [1, 2, 3]
 
     def test_order_explicit(self):
-        @dataslots(order=['x', 'z', 'y'])
+        @dataslots(order=["x", "z", "y"])
         class This:
             x: int
             y: int

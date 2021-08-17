@@ -25,7 +25,7 @@ class SlotsObject:
 For funsies, I wanted to see if I could create a different way to instantiate these objects, with less jargon. Something like `collections.namedtuple`, but again without redundant definitions and with the benefits of `__slots__`. This repo is the results of such endeavor.
 
 
-(TL;DR - the [`@dataslots`](#dataslots) decorator ends up being the most useful implementation, free to skip to it if you want to see the fireworks.)
+(`TL;DR` - the [`@dataslots`](#dataslots) decorator ends up being the most useful implementation, free to skip to it if you want to see the fireworks.)
 
 
 ### `slots_factory()`
@@ -152,7 +152,7 @@ _slots_factory_setattrs(my_type, {'x': 1, 'y': 2, 'z': 3})
 
 ### @dataslots
 
-There's a new decorator provided in the `slots_factory` module which attempts to improve upon Python's `dataclasses.dataclass`. Class definitions can be decorated with the `@dataslots` decorator to generate instances of analogous types with `__slots__`. I say `analogous` because at runtime the decorator instantiates a new type instead of modifying the user's defined type. The user's type is simply used as a sort of blueprint for generated the desired type with `__slots__`.
+There's a new decorator provided in the `slots_factory` module which attempts to improve upon Python's `dataclasses.dataclass`. Class definitions can be decorated with the `@dataslots` decorator to generate instances of analogous types with `__slots__`. I say `analogous` because at runtime the decorator instantiates a new type instead of modifying the user's defined type. The user's type is simply used as a sort of blueprint for generating the desired type with `__slots__`.
 
 ```python
 In [1]: from slots_factory import dataslots
@@ -212,7 +212,7 @@ AttributeError                        Traceback (most recent call last)
 AttributeError: instance is immutable.
 ```
 
-`@dataslots` also provides an `order` keyword argument as either a boolean on an iterable. If passed as a boolean, items are iterated over in whatever manner Python decides to sort the attribute names. Order can be made explicit by passing an iterable of attribute names for yielding.
+`@dataslots` also provides an `order` keyword argument as either a boolean or an iterable. If passed as a boolean, items are iterated over in whatever manner Python decides to sort the attribute names. Order can be made explicit by passing an iterable of attribute names for yielding.
 
 ```python
     def test_order_true(self):
