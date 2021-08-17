@@ -25,20 +25,17 @@ def type_():
 def _ordered_types():
     @dataslots(order=True)
     class This:
-        x: int
-        y: int
-        z: int
+        x: int = 1
+        y: int = 2
+        z: int = 3
 
     @dataslots(order=True)
     class That:
-        x: int
-        y: int
-        z: int
-    
+        x: int = 4
+        y: int = 5
+        z: int = 6
 
-    this = This(x=1, y=2, z=3)
-    that = That(x=4, y=5, z=6)
-    yield this, that
+    yield This, That
 
 
 @pytest.fixture(scope="class")
@@ -197,16 +194,25 @@ class TestDataSlots:
         list_ = [one, two, three]
         list_.sort()
         actual = [[getattr(item, attr) for attr in ("x", "y", "z")] for item in list_]
-        expected = [[2, 1, 0], [1, 0, 4], [1, 2, 3]]
+        expected = [[1, 0, 4], [1, 2, 3], [2, 1, 0]]
         assert actual == expected
 
     def test_ordering(self, _ordered_types):
-        this, that = _ordered_types
+        This, That = _ordered_types
+
+        this = This()
+        that = That()
+
         assert this < that
         assert that > this
         assert this <= that
         assert that >= this
         assert this != that
+
+        this = This(x=6)
+
+        assert this > that
+        assert not this < that
 
 class TestDataSlotsOptions:
     def test_frozen(self):

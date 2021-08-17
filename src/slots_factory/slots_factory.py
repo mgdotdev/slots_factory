@@ -136,7 +136,7 @@ def dataslots(_cls=None, **ds_kwargs):
 
         _order = _ds_kwargs.get("order")
         if _order:
-            methods.update(_set_rich_comparisons(_keys, _order))
+            methods.update(_ordering_methods(_keys, _order))
 
         dict_ = wrapped.__dict__
         dict_["type"] = type(f.__name__, (), methods)
@@ -151,10 +151,14 @@ def dataslots(_cls=None, **ds_kwargs):
 
 
 def _frozen(self, *_, **__):
-    raise AttributeError("Instance is immutable.")
+    """For setting instances as immutable, via pointing __setattr__ and
+    __delattr__ here"""
+    raise AttributeError("Instance is immutable")
 
 
-def _set_rich_comparisons(_keys, _order):
+def _ordering_methods(_keys, _order):
+    """Methods to defining ordering. Includes __iter__, and the rich
+    comparisons"""
     if _order is True:
         _order = sorted(_keys)
     def __iter__(self):
@@ -163,8 +167,12 @@ def _set_rich_comparisons(_keys, _order):
 
     def __lt__(self, other):
         for attr in _order:
-            if getattr(self, attr) < getattr(other, attr):
+            left, right = getattr(self, attr), getattr(other, attr)
+            if left == right:
+                continue
+            if left < right:
                 return True
+            return False
         return False
 
     def __le__(self, other):
@@ -193,7 +201,7 @@ def __len__(self):
 
 
 def __eq__(self, other):
-    """SlotObjects are considered equal if both attributes and values match."""
+    """SlotObjects are considered equal if both attributes and values match"""
     try:
         if len(self) != len(other):
             return False
@@ -205,5 +213,5 @@ def __eq__(self, other):
 
 
 def __hash__(self):
-    """Hashing is determined by the attribute names."""
+    """Hashing is determined by the attribute names"""
     return hash(tuple(self.__slots__))

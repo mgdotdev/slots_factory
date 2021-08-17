@@ -41,5 +41,5 @@ setup(
     python_requires=">=3.6",
     tests_require=["pytest"],
     url="https://github.com/1mikegrn/slots_factory",
-    version="0.0.7",
+    version="0.0.8",
 )

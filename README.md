@@ -215,23 +215,47 @@ AttributeError: instance is immutable.
 `@dataslots` also provides an `order` keyword argument as either a boolean or an iterable. If passed as a boolean, items are iterated over in whatever manner Python decides to sort the attribute names. Order can be made explicit by passing an iterable of attribute names for yielding.
 
 ```python
-    def test_order_true(self):
-        @dataslots(order=True)
-        class This:
-            x: int
-            y: int
-            z: int
+def test_order_true(self):
+    @dataslots(order=True)
+    class This:
+        x: int
+        y: int
+        z: int
 
-        this = This(x=1, y=2, z=3)
-        assert [x for x in this] == [1, 2, 3]     
+    this = This(x=1, y=2, z=3)
+    assert [x for x in this] == [1, 2, 3]     
 
-    def test_order_explicit(self):
-        @dataslots(order=['x', 'z', 'y'])
-        class This:
-            x: int
-            y: int
-            z: int
+def test_order_explicit(self):
+    @dataslots(order=['x', 'z', 'y'])
+    class This:
+        x: int
+        y: int
+        z: int
 
-        this = This(x=1, y=2, z=3)
-        assert [x for x in this] == [1, 3, 2]
+    this = This(x=1, y=2, z=3)
+    assert [x for x in this] == [1, 3, 2]
+```
+
+Ordering implies hierarchy, and hierarchy provides a means for rich comparisons. Instances that are ordered can be compared using Python's builtin comparison operators. Comparison is done by applying the respected operator's method as defined on the `self` of the pair of objects, in order, across attributes. Comparison is resolved at first instance of inequality.
+
+```python
+@dataslots(order=True)
+class This:
+    x: int = 1
+    y: int = 2
+    z: int = 3
+
+@dataslots(order=True)
+class That:
+    x: int = 4
+    y: int = 5
+    z: int = 6
+
+In [1]: this, that = This(), That()
+
+In [2]: this < that
+Out[2]: True
+
+In [3]: 
+
 ```
