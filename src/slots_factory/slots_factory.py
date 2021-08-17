@@ -131,29 +131,12 @@ def dataslots(_cls=None, **ds_kwargs):
         }
 
         frozen = _ds_kwargs.get("frozen")
-        if frozen is True:
-
-            def _frozen(self, *_, **__):
-                raise AttributeError("Instance is immutable.")
-
+        if frozen:
             methods.update({"__setattr__": _frozen, "__delattr__": _frozen})
 
         _order = _ds_kwargs.get("order")
         if _order:
-            if _order is True:
-                _order = sorted(_keys)
-
-            def _yield(self):
-                for item in _order:
-                    yield getattr(self, item)
-
-            def _sort(self, other):
-                for attr in _order:
-                    if getattr(self, attr) < getattr(other, attr):
-                        return True
-                return False
-
-            methods.update({"__iter__": _yield, "__lt__": _sort})
+            methods.update(_set_rich_comparisons(_keys, _order))
 
         dict_ = wrapped.__dict__
         dict_["type"] = type(f.__name__, (), methods)
@@ -165,6 +148,37 @@ def dataslots(_cls=None, **ds_kwargs):
     if _cls is None:
         return wrapper
     return wrapper(_cls)
+
+
+def _frozen(self, *_, **__):
+    raise AttributeError("Instance is immutable.")
+
+
+def _set_rich_comparisons(_keys, _order):
+    if _order is True:
+        _order = sorted(_keys)
+    def __iter__(self):
+        for item in _order:
+            yield getattr(self, item)
+
+    def __lt__(self, other):
+        for attr in _order:
+            if getattr(self, attr) < getattr(other, attr):
+                return True
+        return False
+
+    def __le__(self, other):
+        if self < other:
+            return True
+        elif self == other:
+            return True
+        return False
+
+    return {
+        "__iter__": __iter__, 
+        "__lt__": __lt__,
+        "__le__": __le__
+    }
 
 
 def __repr__(self):
