@@ -46,16 +46,21 @@ static PyObject* _slots_factory_hash(PyObject *self, PyObject *args) {
 
 
 static PyObject* _slots_factory_setattrs(PyObject *self, PyObject *args) {
+    // only uses args because it takes 30% longer to parse keywords
+    
     PyObject *kwargs;
     PyObject *instance;
+    int *check_flag;
 
-    if (!PyArg_ParseTuple(args, "OO", &instance, &kwargs)) {
+    if (!PyArg_ParseTuple(args, "OOp", &instance, &kwargs, &check_flag)) {
         return NULL;
     }
 
-    PyObject *__slots__ = PyObject_GetAttrString(instance, "__slots__");
-    if (PyObject_Length(__slots__) != PyObject_Length(kwargs)) {
-        return PyErr_Format(PyExc_AttributeError, "Mismatch in number of attributes");
+    if (check_flag) {
+        PyObject *__slots__ = PyObject_GetAttrString(instance, "__slots__");
+        if (PyObject_Length(__slots__) != PyObject_Length(kwargs)) {
+            return PyErr_Format(PyExc_AttributeError, "Mismatch in number of attributes");
+        }
     }
 
     PyObject *key, *value;
@@ -70,17 +75,17 @@ static PyObject* _slots_factory_setattrs(PyObject *self, PyObject *args) {
 
 
 static char _slots_factory_hash_docs[] = 
-    "compute a hash as fast as possible";
+    "compute a hash as fast as possible.";
 
 
 static char _slots_factory_setattrs_docs[] =
-    "set attributes as fast as possible";
+    "set attributes at C layer. Provides basic consistency checking if arg[-1]==True.";
 
 
 static PyMethodDef SlotsFactoryToolsMethods[] = {
-    {"_slots_factory_hash", _slots_factory_hash, METH_VARARGS, _slots_factory_hash_docs},
-    {"_slots_factory_setattrs", _slots_factory_setattrs, METH_VARARGS, _slots_factory_setattrs_docs},
-    {NULL, NULL, 0, NULL}
+    {"_slots_factory_hash", (PyCFunction)_slots_factory_hash, METH_VARARGS, _slots_factory_hash_docs},
+    {"_slots_factory_setattrs", (PyCFunction)_slots_factory_setattrs, METH_VARARGS, _slots_factory_setattrs_docs},
+    {NULL}
 };
 
 

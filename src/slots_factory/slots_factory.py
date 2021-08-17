@@ -1,6 +1,8 @@
+from functools import wraps
+
 from slots_factory.tools.SlotsFactoryTools import (
     _slots_factory_hash,
-    _slots_factory_setattrs,
+    _slots_factory_setattrs
 )
 
 
@@ -14,28 +16,30 @@ def slots_from_type(type_, **kwargs):
     :rtype: SlotsObject
     """
     instance = type_()
-    _slots_factory_setattrs(instance, kwargs)
+    _slots_factory_setattrs(instance, kwargs, False)
     return instance
 
 
-def type_factory(_name, args):
+def type_factory(_name="Slots_Object", args=()):
     """function that returns a new Python type w/ __slots__, includes a __repr__
 
     :param _name: name of the new type
     :type _name: str
     :param args: iterable (list, tuple) of strings that correspond to the
     attributes of the objects
-    :type args: List[str, str...]
+    :type args: Iter[str, str...]
 
     :return: type definition defined by function arguments
     :rtype: type
     """
-
-    def __repr__(self):
-        contents = ", ".join([f"{key}={getattr(self, key)}" for key in self.__slots__])
-        return f"{self.__class__.__name__}({contents})"
-
-    type_ = type(_name, (), {"__slots__": args, "__repr__": __repr__})
+    methods = {
+        "__slots__": args, 
+        "__len__": __len__,
+        "__eq__": __eq__,
+        "__hash__": __hash__,
+        "__repr__": __repr__
+    }
+    type_ = type(_name, (), methods)
     return type_
 
 
@@ -56,7 +60,7 @@ def slots_factory(_name="SlotsObject", **kwargs):
         type_ = type_factory(_name, kwargs.keys())
         slots_factory.__dict__[id_] = type_
     instance = type_()
-    _slots_factory_setattrs(instance, kwargs)
+    _slots_factory_setattrs(instance, kwargs, False)
     return instance
 
 
@@ -78,8 +82,110 @@ def fast_slots(_name="SlotsObject", **kwargs):
         fast_slots.__dict__[_name] = type_
     try:
         instance = type_()
-        _slots_factory_setattrs(instance, kwargs)
+        _slots_factory_setattrs(instance, kwargs, True)
         return instance
     except AttributeError:
         del fast_slots.__dict__[_name]
         return fast_slots(_name, **kwargs)
+
+
+def dataslots(_cls=None, **ds_kwargs):
+    """provides a decorator for ingesting type definitions derived from `class`
+    and returning a retyped definition which contains __slots__.
+
+    :param _cls: object to be emulated
+    :type _cls: type
+
+    :param frozen: optional flag for ensuring data is immutable
+    :type frozen: bool
+
+    :return: wrapper functions
+    :rtype: function
+    """
+    def wrapper(f):
+        @wraps(f)
+        def wrapped(**kwargs):
+            _data = wrapped.__dict__
+            _defaults = _data["defaults"]
+            if _defaults:
+                _defaults.update(kwargs)
+            else:
+                _defaults = kwargs
+            type_ = _data['type']
+
+            # assign values to the type, then instantiate, so that we can
+            # setattrs without tripping up __setattr__ if frozen=True
+            _slots_factory_setattrs(type_, _defaults, False)
+            return type_()
+
+        _keys = f.__annotations__.keys()
+        _ds_kwargs = wrapper.__dict__['ds_kwargs']
+        methods = {
+            "__slots__": _keys, 
+            "__doc__": f.__doc__,
+            "__len__": __len__,
+            "__eq__": __eq__,
+            "__hash__": __hash__,
+            "__repr__": __repr__
+        }
+
+        frozen = _ds_kwargs.get('frozen')
+        if frozen is True:
+            def _frozen(self, *_, **__):
+                raise AttributeError("Instance is immutable.")
+            methods.update({
+                "__setattr__": _frozen,
+                "__delattr__": _frozen
+            })
+
+        _order = _ds_kwargs.get('order')
+        if _order:
+            if _order is True:
+                _order = sorted(_keys)
+            def _yield(self):
+                for item in _order:
+                    yield getattr(self, item)
+            methods.update({"__iter__": _yield})
+
+        dict_ = wrapped.__dict__
+        dict_["type"] = type(
+                f.__name__, 
+                (),
+                methods
+        )
+        dict_["defaults"] = {key: getattr(f, key) for key in _keys if hasattr(f, key)}
+        return wrapped
+
+    wrapper.__dict__['ds_kwargs'] = ds_kwargs
+
+    if _cls is None:
+        return wrapper
+    return wrapper(_cls)
+
+
+def __repr__(self):
+    """SlotsObject(key=value...)"""
+    contents = ", ".join([f"{key}={getattr(self, key)}" for key in self.__slots__])
+    return f"{self.__class__.__name__}({contents})"
+
+
+def __len__(self):
+    """returns the number of items defined by the SlotObject"""
+    return len(self.__slots__)
+
+
+def __eq__(self, other):
+    """SlotObjects are considered equal if both attributes and values match."""
+    try:
+        if len(self) != len(other):
+            return False
+        return all(
+            getattr(self, attr) == getattr(other, attr) 
+            for attr in self.__slots__
+        )
+    except AttributeError:
+        return False
+
+def __hash__(self):
+    """Hashing is determined by the attribute names."""
+    return hash(tuple(self.__slots__))
