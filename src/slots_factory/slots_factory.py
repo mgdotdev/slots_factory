@@ -1,14 +1,39 @@
-from functools import wraps
+from functools import update_wrapper
+from types import (
+    FunctionType
+)
 
 from slots_factory.tools.SlotsFactoryTools import (
     _slots_factory_hash,
     _slots_factory_setattrs,
-    _slots_factory_setattrs_from_object,
+)
+
+from .initializers import (
+    wrapped_defaults,
+    wrapped_functions,
+    wrapped_not_frozen,
+    wrapped_generic,
+    wrapped_slim
+)
+
+from .object_model_methods import (
+    _frozen,
+    _ordering_methods,
+    __repr__,
+    __len__,
+    __eq__,
+    __hash__,
+    __iter__
 )
 
 
+TYPEDEF_DICT_KEYS = {
+    '__module__', '__annotations__', '__doc__', '__dict__', '__weakref__'
+}
+
+
 def slots_from_type(type_, **kwargs):
-    """Convienience function. Takes a type and kwargs, and instantiates the type
+    """Convenience function. Takes a type and kwargs, and instantiates the type
     with kwargs assigned to corresponding attributes.
 
     :param type_: type as derived from type_factory()
@@ -21,8 +46,29 @@ def slots_from_type(type_, **kwargs):
     return instance
 
 
-def type_factory(_name="Slots_Object", args=()):
-    """function that returns a new Python type w/ __slots__, includes a __repr__
+def slots_from_dict(attrs={}, _name="SlotsObject", **kwargs):
+    """function that returns a Python Python instance w/ __slots__ from a dict,
+    allows for same kwargs as dataslots.
+    
+    :param attrs: dictionary template for setting attr values on returned
+    instance
+    :param _name: name of returned object
+    :param **kwargs: options for type definition, mirrors those of @dataslots
+
+    :return: SlotsObject instance
+    :rtype: SlotsObject
+    """
+    if not kwargs.get("order"):
+        kwargs['order'] = attrs.keys()
+    type_ = fast_slots.__dict__.get(_name)
+    if not type_:
+        fast_slots.__dict__[_name] = type_factory(attrs.keys(), _name, **kwargs)
+    return fast_slots(_name, **attrs) 
+
+
+def type_factory(args, _name="Slots_Object", **kwargs):
+    """function that returns a new Python type w/ __slots__, and other dunder
+    methods if specified.
 
     :param _name: name of the new type
     :type _name: str
@@ -35,13 +81,30 @@ def type_factory(_name="Slots_Object", args=()):
     """
     methods = {
         "__slots__": args,
+        "__iter__": __iter__,
         "__len__": __len__,
         "__eq__": __eq__,
         "__hash__": __hash__,
-        "__repr__": __repr__,
+        "__repr__": __repr__
     }
-    type_ = type(_name, (), methods)
-    return type_
+
+    frozen = kwargs.get("frozen")
+    if frozen:
+        methods.update({"__setattr__": _frozen, "__delattr__": _frozen})
+
+    _order = kwargs.get("order")
+    if _order:
+        methods.update(_ordering_methods(args, _order))
+
+    _docs = kwargs.get("__doc__")
+    if _docs:
+        methods.update({"__doc__": _docs})
+
+    _properties = kwargs.get("_properties")
+    if _properties:
+        methods.update(**_properties)
+
+    return type(_name, (), methods)
 
 
 def slots_factory(_name="SlotsObject", **kwargs):
@@ -58,7 +121,7 @@ def slots_factory(_name="SlotsObject", **kwargs):
     id_ = _slots_factory_hash(_name, kwargs)
     type_ = slots_factory.__dict__.get(id_)
     if not type_:
-        type_ = type_factory(_name, kwargs.keys())
+        type_ = type_factory(kwargs.keys(), _name, order=kwargs.keys())
         slots_factory.__dict__[id_] = type_
     instance = type_()
     _slots_factory_setattrs(instance, kwargs, False)
@@ -79,7 +142,7 @@ def fast_slots(_name="SlotsObject", **kwargs):
     """
     type_ = fast_slots.__dict__.get(_name)
     if not type_:
-        type_ = type_factory(_name, kwargs.keys())
+        type_ = type_factory(kwargs.keys(), _name, order=kwargs.keys())
         fast_slots.__dict__[_name] = type_
     try:
         instance = type_()
@@ -105,113 +168,53 @@ def dataslots(_cls=None, **ds_kwargs):
     """
 
     def wrapper(f):
-        @wraps(f)
-        def wrapped(**kwargs):
-            _data = wrapped.__dict__
-            _defaults = _data["defaults"]
-            if _defaults:
-                _defaults.update(kwargs)
-            else:
-                _defaults = kwargs
-            type_ = _data["type"]
+        _attrs, _functions, _properties = {}, {}, {}
+        for collection in (f.__annotations__, f.__dict__):
+            for k, v in collection.items():
+                if k in TYPEDEF_DICT_KEYS:
+                    continue
+                if isinstance(v, FunctionType):
+                    _functions[k] = v
+                elif isinstance(v, property):
+                    _properties[k] = v
+                else:
+                    _attrs[k] = v
 
-            instance = type_()
-            _slots_factory_setattrs_from_object(object, instance, _defaults)
-            return instance
-
-        _keys = f.__annotations__.keys()
-        _ds_kwargs = wrapper.__dict__["ds_kwargs"]
-        methods = {
-            "__slots__": _keys,
+        _keys = _attrs.keys()
+        _ds_kwargs = {
             "__doc__": f.__doc__,
-            "__len__": __len__,
-            "__eq__": __eq__,
-            "__hash__": __hash__,
-            "__repr__": __repr__,
+            "_properties": _properties,
+            **wrapper.__dict__["ds_kwargs"],
         }
 
-        frozen = _ds_kwargs.get("frozen")
-        if frozen:
-            methods.update({"__setattr__": _frozen, "__delattr__": _frozen})
+        _type = type_factory(
+            list(_keys) + list(_functions.keys()), f.__name__, **_ds_kwargs
+        )
 
-        _order = _ds_kwargs.get("order")
-        if _order:
-            methods.update(_ordering_methods(_keys, _order))
+        _defaults = {
+            key: getattr(f, key) for key in _keys if hasattr(f, key)
+        }
 
-        dict_ = wrapped.__dict__
-        dict_["type"] = type(f.__name__, (), methods)
-        dict_["defaults"] = {key: getattr(f, key) for key in _keys if hasattr(f, key)}
-        return wrapped
+        if not wrapper.__dict__["ds_kwargs"].get("frozen", False):
+            if not _defaults and not _functions:
+                wrapped = wrapped_slim()
+            elif not _functions:
+                wrapped = wrapped_defaults()
+            elif not _defaults:
+                wrapped = wrapped_functions()
+            else:
+                wrapped = wrapped_not_frozen()
+        else:
+            wrapped = wrapped_generic()
+
+        wrapped.__dict__["_type"] = _type
+        wrapped.__dict__["_defaults"] = _defaults
+        wrapped.__dict__["_functions"] = _functions
+
+        return update_wrapper(wrapped, f)
 
     wrapper.__dict__["ds_kwargs"] = ds_kwargs
-
     if _cls is None:
         return wrapper
     return wrapper(_cls)
-
-
-def _frozen(self, *_, **__):
-    """For setting instances as immutable, via pointing __setattr__ and
-    __delattr__ here"""
-    raise AttributeError("Instance is immutable")
-
-
-def _ordering_methods(_keys, _order):
-    """Methods to defining ordering. Includes __iter__, and the rich
-    comparisons"""
-    if _order is True:
-        _order = sorted(_keys)
-    def __iter__(self):
-        for item in _order:
-            yield getattr(self, item)
-
-    def __lt__(self, other):
-        for attr in _order:
-            left, right = getattr(self, attr), getattr(other, attr)
-            if left == right:
-                continue
-            if left < right:
-                return True
-            return False
-        return False
-
-    def __le__(self, other):
-        if self < other:
-            return True
-        elif self == other:
-            return True
-        return False
-
-    return {
-        "__iter__": __iter__, 
-        "__lt__": __lt__,
-        "__le__": __le__
-    }
-
-
-def __repr__(self):
-    """SlotsObject(key=value...)"""
-    contents = ", ".join([f"{key}={getattr(self, key)}" for key in self.__slots__])
-    return f"{self.__class__.__name__}({contents})"
-
-
-def __len__(self):
-    """returns the number of items defined by the SlotObject"""
-    return len(self.__slots__)
-
-
-def __eq__(self, other):
-    """SlotObjects are considered equal if both attributes and values match"""
-    try:
-        if len(self) != len(other):
-            return False
-        return all(
-            getattr(self, attr) == getattr(other, attr) for attr in self.__slots__
-        )
-    except AttributeError:
-        return False
-
-
-def __hash__(self):
-    """Hashing is determined by the attribute names"""
-    return hash(tuple(self.__slots__))
+dataslots.__dict__["from_dict"] = slots_from_dict

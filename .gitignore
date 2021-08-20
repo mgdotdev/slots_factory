@@ -5,5 +5,7 @@ venv/
 .pytest_cache/
 .tox/
 
+.notes
+
 src/*.egg-info
 *.so

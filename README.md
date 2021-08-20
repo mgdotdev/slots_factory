@@ -130,7 +130,7 @@ Finally, if we're really craving the speeds, the most efficient way to use this 
 ```python
 from slots_factory import type_factory, slots_from_type
 
-type_ = type_factory("SlotsObject", ['x', 'y', 'z'])
+type_ = type_factory(['x', 'y', 'z'], _name="SlotsObject")
 instance = slots_from_type(type_, x=1, y=2, z=3,)
 ```
 
@@ -145,7 +145,7 @@ In [6]: %timeit instance = slots_from_type(type_, x=1, y=2, z=3)
 from slots_factory import type_factory
 from slots_factory.tools.SlotsFactoryTools import _slots_factory_setattrs
 
-my_type = type_factory("SlotsObject", ['x', 'y', 'z'])
+my_type = type_factory(['x', 'y', 'z'], _name="SlotsObject")
 instance = my_type()
 _slots_factory_setattrs(my_type, {'x': 1, 'y': 2, 'z': 3})
 ```
@@ -157,25 +157,24 @@ There's a new decorator provided in the `slots_factory` module which attempts to
 ```python
 In [1]: from slots_factory import dataslots
 
-In [2]: @dataslots
-   ...: class This:
-   ...:    x: int
-   ...:    y: int
-   ...:    z: int
-   ...:
+@dataslots
+class This:
+   x: int
+   y: int
+   z: int
 
 In [3]: %timeit This(x=1, y=2, z=3)
 344 ns ± 7.07 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
 ```
 
-The `@dataslots` decorator allows for users to set default values using standard python syntax, and defaults can be overwritten simply by defining a new value at instantiation. There is no ordering restrictions on default definitions.
+The `@dataslots` decorator allows for users to set default values using standard python syntax, and defaults can be overwritten simply by defining a new value at instantiation. There is no ordering restrictions on default definitions. It's also worth noting that, normally, when writing `__slots__` classes, we can't define class attributes which conflict with the `__slots__` structure that Python creates. However due to the internal mechanics of `@dataslots`, we can set `__slots__` object defaults absent any annotations.
 
 ```python
-In [4]: @dataslots
-   ...: class FizzBuzz:
-   ...:     fizz: str = 'fizz'
-   ...:     buzz: str
-   ...:     fizzbuzz: str = 'spam'
+@dataslots
+class FizzBuzz:
+    fizz = 'fizz'
+    buzz: str
+    fizzbuzz: str = 'spam'
 
 In [5]: this = FizzBuzz(buzz='buzz', fizzbuzz='fizzbuzz')
 Out[5]: FizzBuzz(fizz=fizz, buzz=buzz, fizzbuzz=fizzbuzz)
@@ -186,10 +185,10 @@ Out[5]: FizzBuzz(fizz=fizz, buzz=buzz, fizzbuzz=fizzbuzz)
 `@dataslots` provides a `frozen` keyword argument as a boolean. Passing `frozen=True` to the `@dataslots` decorator forces instances to be immutable.
 
 ```python
-In [6]: @dataslots(frozen=True)
-   ...: class FizzBuzz:
-   ...:     fizz: str = 'fizz'
-   ...:     buzz: str = 'buzz'
+@dataslots(frozen=True)
+class FizzBuzz:
+    fizz: str = 'fizz'
+    buzz: str = 'buzz'
 
 In [7]: fb = FizzBuzz()
 
@@ -256,6 +255,72 @@ In [1]: this, that = This(), That()
 In [2]: this < that
 Out[2]: True
 
-In [3]: 
+In [3]: this = This(x=6)
 
+In [4]: this < that
+Out[4]: False
 ```
+
+Though dataslots are not dictionaries, they have many of the properties you would expect from a dictionary object. As such, conversion to and from dictionaries is built in. And as dictionaries are ordered in Python 3.6+, we make sure to preserve order between conversions.
+
+```python
+@dataslots(order=["x", "z", "y"])
+class This:
+    x: int
+    y: int
+    z: int
+
+In [1]: this = This(x=1, y=2, z=3)
+
+In [2]: that = dict(this)
+
+In [3]: that
+Out[3]: {'x': 1, 'z': 3, 'y': 2}
+
+In [4]: dataslots.from_dict(that)
+Out[4]: SlotsObject(x=1, z=3, y=2)
+```
+
+Dataslots also supports user-defined methods and properties. They can be defined as normal on the class, and @dataslots will be sure to carry these objects over to the `__slots__` object.
+
+```python
+@dataslots
+class FizzBuzz:
+    fizz = 'fizz'
+    buzz: str = 'buzz'
+
+    def fizzbuzz(self):
+        return self.fizz + self.buzz
+
+In [1]: fizzbuzz = FizzBuzz()
+
+In [2]: fizzbuzz.fizzbuzz()
+Out[2]: "fizzbuzz"
+
+@dataslots
+class FizzBuzz:
+    fizz = 'fizz'
+    buzz: str = 'buzz'
+
+    @property
+    def fizzbuzz(self):
+        return self.fizz + self.buzz
+
+    @fizzbuzz.setter
+    def fizzbuzz(self, item):
+        self.fizz, self.buzz = item
+
+In [1]: fizzbuzz = FizzBuzz()
+
+In [2]: fizzbuzz.fizzbuzz
+Out[2]: 'fizzbuzz'
+
+In [3]: fizzbuzz.fizzbuzz = ("This", "That")
+
+In [4]: fizzbuzz.fizzbuzz
+Out[4]: 'ThisThat'
+```
+
+#### `@dataslots` Benchmarks
+
+In general, the less you define, the faster it runs. This is because `@dataslots` returns different callables depending on how the blueprint type is defined. The fastest callables are ones which only have base attributes to define; these run at sub-300 nanoseconds / instance, and can be as fast as typical instance definitions of python objects. Methods require extra gymnastics during setup due, and this causes instance creation to be mid-600 nanoseconds / instance. Properties on the other hand, as they have their own `setter` protocol abstracted away from the `__slot__` architecture, induce almost no extra overhead. Finally, having a `frozen` dataslot incurs the most overhead, as attribute setting requires using `object.__setattr__` to circumnavigate the `AttributeError`. Instantiation of `frozen` dataslots is in the mid-900 nanoseconds / instance. These numbers are relative as they were benchmarked on my personal machine; run `/tests/test_benchmarks.py` to measure your own performance.

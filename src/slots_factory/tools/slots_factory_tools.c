@@ -66,17 +66,20 @@ static PyObject* _slots_factory_setattrs(PyObject *self, PyObject *args) {
     PyObject *key, *value;
     Py_ssize_t pos = 0;
     while (PyDict_Next(kwargs, &pos, &key, &value)) {
-        PyObject_SetAttr(instance, key, value);
+        if (PyObject_SetAttr(instance, key, value) == -1) {
+            return PyErr_Format(PyExc_AttributeError, "Cannot set attribute");
+        }
     }
 
     Py_INCREF(Py_None);
     return Py_None;
 }
 
+
 static PyObject* _slots_factory_setattrs_from_object(PyObject *self, PyObject *args) {
+    PyObject *object;
     PyObject *instance;
     PyObject *kwargs;
-    PyObject *object;
 
     if (!PyArg_ParseTuple(args, "OOO", &object, &instance, &kwargs)) {
         return NULL;
@@ -104,11 +107,12 @@ static char _slots_factory_setattrs_docs[] =
 static char _slots_factory_setattrs_from_object_docs[] =
     "uses passed reference to object for setting attributes, as means of bypassing any frozen attributes";
 
+
 static PyMethodDef SlotsFactoryToolsMethods[] = {
     {"_slots_factory_hash", (PyCFunction)_slots_factory_hash, METH_VARARGS, _slots_factory_hash_docs},
     {"_slots_factory_setattrs", (PyCFunction)_slots_factory_setattrs, METH_VARARGS, _slots_factory_setattrs_docs},
     {"_slots_factory_setattrs_from_object", _slots_factory_setattrs_from_object, METH_VARARGS, _slots_factory_setattrs_from_object_docs}, 
-    {NULL}
+    {NULL, NULL, 0, NULL}
 };
 
 
