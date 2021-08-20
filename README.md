@@ -25,7 +25,7 @@ class SlotsObject:
 For funsies, I wanted to see if I could create a different way to instantiate these objects, with less jargon. Something like `collections.namedtuple`, but again without redundant definitions and with the benefits of `__slots__`. This repo is the results of such endeavor.
 
 
-(`TL;DR` - the [`@dataslots`](#dataslots) decorator ends up being the most useful implementation, free to skip to it if you want to see the fireworks.)
+`TL;DR` - the [`@dataslots`](#dataslots) decorator ends up being the most useful implementation, free to skip to it if you want to see the fireworks.
 
 
 ### `slots_factory()`
@@ -54,8 +54,8 @@ Out[7]: fizzbuzz(fizz=fizz, buzz=buzz)
 
 In [8]: slots_factory.__dict__
 Out[8]:
-{1040: slots_factory.slots_factory.SlotsObject,
-1419034624: slots_factory.slots_factory.fizzbuzz}
+{13844952821349480973: slots_factory.slots_factory.SlotsObject,
+7572372383060875: slots_factory.slots_factory.fizzbuzz}
 ```
 
 As we can see, we created three instances, `this`, `that`, and `fizzbuzz`. `this` and `that` are instances of the same type, since the function args were the same. `fizzbuzz` is a different type however, since its function arguments were different.
@@ -163,8 +163,17 @@ class This:
    y: int
    z: int
 
-In [3]: %timeit This(x=1, y=2, z=3)
-344 ns ± 7.07 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
+In [2]: %timeit This(x=1, y=2, z=3)
+307 ns ± 7.07 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
+
+@dataslots
+class This:
+   x: int = 1
+   y: int = 2
+   z: int = 3
+
+In [2]: %timeit This()
+275 ns ± 7.07 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
 ```
 
 The `@dataslots` decorator allows for users to set default values using standard python syntax, and defaults can be overwritten simply by defining a new value at instantiation. There is no ordering restrictions on default definitions. It's also worth noting that, normally, when writing `__slots__` classes, we can't define class attributes which conflict with the `__slots__` structure that Python creates. However due to the internal mechanics of `@dataslots`, we can set `__slots__` object defaults absent any annotations.
@@ -214,25 +223,29 @@ AttributeError: instance is immutable.
 `@dataslots` also provides an `order` keyword argument as either a boolean or an iterable. If passed as a boolean, items are iterated over in whatever manner Python decides to sort the attribute names. Order can be made explicit by passing an iterable of attribute names for yielding.
 
 ```python
-def test_order_true(self):
-    @dataslots(order=True)
-    class This:
-        x: int
-        y: int
-        z: int
 
-    this = This(x=1, y=2, z=3)
-    assert [x for x in this] == [1, 2, 3]     
+@dataslots(order=True)
+class This:
+    x: int
+    y: int
+    z: int
 
-def test_order_explicit(self):
-    @dataslots(order=['x', 'z', 'y'])
-    class This:
-        x: int
-        y: int
-        z: int
+In [1]: this = This(x=1, y=2, z=3)
 
-    this = This(x=1, y=2, z=3)
-    assert [x for x in this] == [1, 3, 2]
+In [2]: [x for x in this]
+Out[2]: [1, 2, 3]     
+
+
+@dataslots(order=['x', 'z', 'y'])
+class This:
+    x: int
+    y: int
+    z: int
+
+In [3]: this = This(x=1, y=2, z=3)
+
+In [4]: [x for x in this]
+Out[4]: [1, 3, 2]  
 ```
 
 Ordering implies hierarchy, and hierarchy provides a means for rich comparisons. Instances that are ordered can be compared using Python's builtin comparison operators. Comparison is done by applying the respected operator's method as defined on the `self` of the pair of objects, in order, across attributes. Comparison is resolved at first instance of inequality.
@@ -323,4 +336,4 @@ Out[4]: 'ThisThat'
 
 #### `@dataslots` Benchmarks
 
-In general, the less you define, the faster it runs. This is because `@dataslots` returns different callables depending on how the blueprint type is defined. The fastest callables are ones which only have base attributes to define; these run at sub-300 nanoseconds / instance, and can be as fast as typical instance definitions of python objects. Methods require extra gymnastics during setup due, and this causes instance creation to be mid-600 nanoseconds / instance. Properties on the other hand, as they have their own `setter` protocol abstracted away from the `__slot__` architecture, induce almost no extra overhead. Finally, having a `frozen` dataslot incurs the most overhead, as attribute setting requires using `object.__setattr__` to circumnavigate the `AttributeError`. Instantiation of `frozen` dataslots is in the mid-900 nanoseconds / instance. These numbers are relative as they were benchmarked on my personal machine; run `/tests/test_benchmarks.py` to measure your own performance.
+In general, the less you define, the faster it runs. This is because `@dataslots` returns different callables depending on how the blueprint type is defined. The fastest callables are ones which only have base attributes to define; these run on average in the sub-300 nanoseconds / instance range, and can be as fast as the typical instantiations of python objects. Methods require extra gymnastics during setup, and this causes instance creation to be mid-600 nanoseconds / instance. Properties on the other hand, as they have their own `setter` protocol abstracted away from the `__slot__` architecture, induce almost no extra overhead. Finally, having a `frozen` dataslot incurs the most overhead, as attribute setting requires using `object.__setattr__` to circumnavigate the `AttributeError`. Instantiation of `frozen` dataslots is in the mid-900 nanoseconds / instance. These numbers are relative as they were benchmarked on my personal machine; run `/tests/test_benchmarks.py` to measure your own performance.
