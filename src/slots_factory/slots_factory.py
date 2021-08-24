@@ -21,7 +21,7 @@ from .object_model_methods import (
     __len__,
     __eq__,
     __hash__,
-    __iter__,
+    __iter__
 )
 
 
@@ -87,7 +87,7 @@ def type_factory(args, _name="Slots_Object", **kwargs):
         "__len__": __len__,
         "__eq__": __eq__,
         "__hash__": __hash__,
-        "__repr__": __repr__,
+        "__repr__": __repr__
     }
 
     frozen = kwargs.get("frozen")
@@ -195,6 +195,18 @@ def dataslots(_cls=None, **ds_kwargs):
                     _attrs[k] = v
                 _seen_keys.add(k)
 
+        _defaults = {key: getattr(f, key) for key in _attrs.keys() if hasattr(f, key)}
+
+        if not wrapper.__dict__["ds_kwargs"].get("frozen", False):
+            if not (_defaults or _callables):
+                __init__ = wrapped_slim()
+            else:
+                __init__ = wrapped_generic()
+        else:
+            __init__ = wrapped_frozen()
+
+        _methods.update({"__init__": __init__})
+
         _ds_kwargs = {
             "__doc__": f.__doc__,
             "_methods": _methods,
@@ -207,23 +219,13 @@ def dataslots(_cls=None, **ds_kwargs):
             **_ds_kwargs
         )
 
-        _defaults = {key: getattr(f, key) for key in _attrs.keys() if hasattr(f, key)}
+        __init__.__dict__["_defaults"] = _defaults
+        __init__.__dict__["_callables"] = _callables
 
-        if not wrapper.__dict__["ds_kwargs"].get("frozen", False):
-            if not (_defaults or _callables):
-                wrapped = wrapped_slim()
-            else:
-                wrapped = wrapped_generic()
-        else:
-            wrapped = wrapped_frozen()
-
-        wrapped.__dict__["_type"] = _type
-        wrapped.__dict__["_defaults"] = _defaults
-        wrapped.__dict__["_callables"] = _callables
-
-        return update_wrapper(wrapped, f)
+        return _type
     
     wrapper.__dict__["ds_kwargs"] = ds_kwargs
+
     if _cls is None:
         return wrapper
     return wrapper(_cls)

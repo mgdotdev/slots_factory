@@ -415,13 +415,15 @@ class TestEdgeCases:
         assert len(this.items) == 3
 
 
-# class TestDerivedObjects:
-#     def test_derived_dataslots(self):
-#         @dataslots
-#         class Base:
-#             x: int = 1
+class TestDerivedObjects:
+    def test_derived_dataslots(self):
+        @dataslots
+        class Base:
+            x: int = 1
 
-#         class Derived(Base):
-#             y: int = 2
+        @dataslots
+        class Derived(Base):
+            y: int = 2
 
-#         instance = Derived()
+        instance = Derived()
+        import pdb; pdb.set_trace()
