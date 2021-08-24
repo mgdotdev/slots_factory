@@ -1,3 +1,5 @@
+from types import FunctionType
+
 
 def _frozen(self, *_, **__):
     """For setting instances as immutable, via pointing __setattr__ and
@@ -10,6 +12,7 @@ def _ordering_methods(_keys, _order):
     comparisons"""
     if _order is True:
         _order = sorted(_keys)
+
     def __iter__(self):
         for item in _order:
             yield item, getattr(self, item)
@@ -31,11 +34,7 @@ def _ordering_methods(_keys, _order):
             return True
         return False
 
-    return {
-        "__iter__": __iter__, 
-        "__lt__": __lt__,
-        "__le__": __le__
-    }
+    return {"__iter__": __iter__, "__lt__": __lt__, "__le__": __le__}
 
 
 def __repr__(self):

@@ -334,6 +334,52 @@ In [4]: fizzbuzz.fizzbuzz
 Out[4]: 'ThisThat'
 ```
 
-#### `@dataslots` Benchmarks
+#### Mutable default types in `@dataslots` via `lambda`
 
-In general, the less you define, the faster it runs. This is because `@dataslots` returns different callables depending on how the blueprint type is defined. The fastest callables are ones which only have base attributes to define; these run on average in the sub-300 nanoseconds / instance range, and can be as fast as the typical instantiations of python objects. Methods require extra gymnastics during setup, and this causes instance creation to be mid-600 nanoseconds / instance. Properties on the other hand, as they have their own `setter` protocol abstracted away from the `__slot__` architecture, induce almost no extra overhead. Finally, having a `frozen` dataslot incurs the most overhead, as attribute setting requires using `object.__setattr__` to circumnavigate the `AttributeError`. Instantiation of `frozen` dataslots is in the mid-900 nanoseconds / instance. These numbers are relative as they were benchmarked on my personal machine; run `/tests/test_benchmarks.py` to measure your own performance.
+Given the nature of mutable types in Python, it's always been considered gauche to define default values as mutable types within object definitions. In order to allow for mutable defaults whose references aren't shared across instances, `@dataslots` default values can be assigned as either `type` type or a `lambda` expression with no arguments. These defaults are then called on instantiation, and instances assigned the result of the callable.
+
+```python
+@dataslots
+class RecordsCollection:
+    list_of_records = lambda: [{"record_id": 0, "name": "Terminal Record"}]
+    record_count: int = 1
+
+    def add_record(self, _id, name):
+        self.record_count += 1
+        self.list_of_records.append({
+                "record_id": _id,
+                "name": name
+            }
+        )
+
+@dataslots
+class RecordIds:
+    ids = set
+
+    def ingest_record(self, record):
+        for item in record.list_of_records:
+            self.ids.add(item["record_id"])
+
+
+In [1]: n1 = RecordsCollection()
+
+In [2]: %timeit RecordsCollection()
+Out[2]: 496 ns ± 1.95 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
+
+In [3]: n2 = RecordsCollection()
+
+In [4]: n1.add_record(5, "New Record")
+
+In [5]: n1.list_of_records
+Out[5]: [{'record_id': 0, 'name': 'Terminal Record'}, {'record_id': 5, 'name': 'New Record'}]
+
+In [6]: n2.list_of_records
+Out[6]: [{'record_id': 0, 'name': 'Terminal Record'}]
+
+In [7]: rec_ids = RecordIds()
+
+In [8]: rec_ids.ingest_record(n1)
+
+In [9]: rec_ids.ids
+Out[9]: {0, 5}
+```

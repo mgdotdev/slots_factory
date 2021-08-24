@@ -6,13 +6,14 @@ from slots_factory import (
     slots_from_type,
     type_factory,
     slots_from_dict,
-    dataslots
+    dataslots,
 )
 
 
 from slots_factory.tools.SlotsFactoryTools import (
     _slots_factory_hash,
     _slots_factory_setattrs,
+    _slots_factory_setattrs_slim,
 )
 
 
@@ -23,11 +24,12 @@ def type_():
     yield _type
 
 
-@pytest.fixture(scope='class')
+@pytest.fixture(scope="class")
 def _ordered_types():
     @dataslots(order=True)
     class This:
         """Docstrings"""
+
         x: int = 1
         y: int = 2
         z: int = 3
@@ -35,6 +37,7 @@ def _ordered_types():
     @dataslots(order=True)
     class That:
         """Docstrings"""
+
         x: int = 4
         y: int = 5
         z: int = 6
@@ -49,9 +52,9 @@ def ds(_ordered_types):
     yield this
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def dict_():
-    return {'x': 1, 'y': 2, 'z': 3}
+    return {"x": 1, "y": 2, "z": 3}
 
 
 class TestTools:
@@ -60,15 +63,15 @@ class TestTools:
         two = _slots_factory_hash("SlotsObject", {"x": 1, "y": 2, "z": 3})
         assert one != two
 
-    def test_attr_setting(self, type_, dict_):
+    def test_attr_setting_slim(self, type_, dict_):
         instance = type_()
-        _slots_factory_setattrs(instance, dict_, True)
+        _slots_factory_setattrs_slim(instance, dict_, True)
         assert all(getattr(instance, key) == value for key, value in dict_.items())
 
     def test_attr_error(self, type_):
         instance = type_()
         with pytest.raises(AttributeError) as e:
-            _slots_factory_setattrs(instance, {"x": 1, "y": 2}, True)
+            _slots_factory_setattrs_slim(instance, {"x": 1, "y": 2}, True)
         assert e.type == AttributeError
         assert e.value.args == ("Mismatch in number of attributes",)
 
@@ -233,6 +236,7 @@ class TestDataSlots:
         this = This(x=7, y=8, z=9)
         assert not this <= that
 
+
 class TestDataSlotsOptions:
     def test_frozen(self):
         @dataslots(frozen=True)
@@ -256,7 +260,7 @@ class TestDataSlotsOptions:
             z: int
 
         this = This(x=1, y=2, z=3)
-        assert [x for x in this] == [('x', 1), ('y', 2), ('z', 3)]
+        assert [x for x in this] == [("x", 1), ("y", 2), ("z", 3)]
 
     def test_order_explicit(self):
         @dataslots(order=["x", "z", "y"])
@@ -266,21 +270,19 @@ class TestDataSlotsOptions:
             z: int
 
         this = This(x=1, y=2, z=3)
-        assert [x for x in this] == [('x', 1), ('z', 3), ('y', 2)]
+        assert [x for x in this] == [("x", 1), ("z", 3), ("y", 2)]
 
 
 class TestDataSlotsConversions:
-
     def test_slots_from_dict(self):
         expected = {"this": "this", "that": "that"}
         this = slots_from_dict(expected, _name="ThisThat")
         actual = dict(this)
         assert all(a == b for (a, b) in zip(actual, expected))
 
-
     def test_to_dict(self, ds, dict_):
         actual = dict(ds)
-        assert all(a == b for (a,b) in zip(actual, dict_))
+        assert all(a == b for (a, b) in zip(actual, dict_))
 
         @dataslots(order=["x", "z", "y"])
         class This:
@@ -290,17 +292,17 @@ class TestDataSlotsConversions:
 
         this = This(x=1, y=2, z=3)
         actual = dict(this)
-        expected = {'x': 1, 'z': 3, 'y': 2}
-        assert all(a == b for (a,b) in zip(actual, expected))
+        expected = {"x": 1, "z": 3, "y": 2}
+        assert all(a == b for (a, b) in zip(actual, expected))
 
     def test_from_dict(self, dict_):
         this = dataslots.from_dict(dict_)
-        assert all(a == b for ((a, _) ,b) in zip(this, dict_))
-    
+        assert all(a == b for ((a, _), b) in zip(this, dict_))
+
     def test_order_preserved(self, dict_):
         ds = dataslots.from_dict(dict_)
         actual = dict(ds)
-        assert all(a == b for (a ,b) in zip(actual, dict_))
+        assert all(a == b for (a, b) in zip(actual, dict_))
 
 
 class TestUserDefinitions:
@@ -310,32 +312,30 @@ class TestUserDefinitions:
             fizz = "fizz"
             buzz: str = "buzz"
             fizzbuzz: str
-        
+
         fizz = Fizz(fizzbuzz="fizzbuzz")
-        assert all(hasattr(fizz, item) for item in ['fizz', 'buzz', "fizzbuzz"])
+        assert all(hasattr(fizz, item) for item in ["fizz", "buzz", "fizzbuzz"])
 
         fizz = Fizz(fizz="buzz", buzz="fizz", fizzbuzz="fizzbuzz")
         assert fizz.buzz == "fizz"
         assert fizz.fizz == "buzz"
-        
-    def test_user_methods(self):
 
+    def test_user_methods(self):
         @dataslots
         class FizzBuzz:
-            fizz = 'fizz'
-            buzz: str = 'buzz'
+            fizz = "fizz"
+            buzz: str = "buzz"
 
             def fizzbuzz(self):
                 return self.fizz + self.buzz
 
         fizzbuzz = FizzBuzz()
-        assert fizzbuzz.fizzbuzz() == 'fizzbuzz'
+        assert fizzbuzz.fizzbuzz() == "fizzbuzz"
 
         fizzbuzz = FizzBuzz(fizz="This", buzz="That")
-        assert fizzbuzz.fizzbuzz() == 'ThisThat'
+        assert fizzbuzz.fizzbuzz() == "ThisThat"
 
     def test_functions_only(self):
-
         @dataslots
         class FizzBuzz:
             fizz: str
@@ -345,14 +345,13 @@ class TestUserDefinitions:
                 return self.fizz + self.buzz
 
         fizzbuzz = FizzBuzz(fizz="fizz", buzz="buzz")
-        assert fizzbuzz.fizzbuzz() == 'fizzbuzz'        
+        assert fizzbuzz.fizzbuzz() == "fizzbuzz"
 
     def test_property(self):
-
         @dataslots
         class FizzBuzz:
-            _fizz = 'fizz'
-            _buzz: str = 'buzz'
+            _fizz = "fizz"
+            _buzz: str = "buzz"
 
             @property
             def fizzbuzz(self):
@@ -364,11 +363,11 @@ class TestUserDefinitions:
 
         fizzbuzz = FizzBuzz()
 
-        assert fizzbuzz.fizzbuzz == 'fizzbuzz'
+        assert fizzbuzz.fizzbuzz == "fizzbuzz"
         fizzbuzz.fizzbuzz = ("This", "That")
-        assert fizzbuzz.fizzbuzz == 'ThisThat'
+        assert fizzbuzz.fizzbuzz == "ThisThat"
 
-    def test_forzen_functions(self):
+    def test_frozen_functions(self):
         @dataslots(frozen=True)
         class FizzBuzz:
             fizz: str
@@ -379,9 +378,50 @@ class TestUserDefinitions:
 
         fizzbuzz = FizzBuzz(fizz="fizz", buzz="buzz")
 
-        assert fizzbuzz.fizzbuzz() == 'fizzbuzz'
+        assert fizzbuzz.fizzbuzz() == "fizzbuzz"
         with pytest.raises(AttributeError) as e:
-            fizzbuzz.fizzbuzz = 'spam'
+            fizzbuzz.fizzbuzz = "spam"
 
         assert e.type == AttributeError
         assert e.value.args == ("Instance is immutable",)
+
+
+class TestEdgeCases:
+    def test_mutable_defaults(self):
+        @dataslots
+        class This:
+            items = set
+
+        this = This()
+
+        this.items.add(1)
+
+        that = This()
+
+        assert this != that
+        assert this.items != that.items
+
+    def test_lambda_function(self):
+        @dataslots
+        class This:
+            items: set = lambda: set([1, 2])
+
+        this = This()
+        that = This()
+
+        this.items.add(3)
+
+        assert this.items != that.items
+        assert len(this.items) == 3
+
+
+# class TestDerivedObjects:
+#     def test_derived_dataslots(self):
+#         @dataslots
+#         class Base:
+#             x: int = 1
+
+#         class Derived(Base):
+#             y: int = 2
+
+#         instance = Derived()

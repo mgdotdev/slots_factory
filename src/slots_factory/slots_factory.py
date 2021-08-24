@@ -1,19 +1,17 @@
+from copy import copy
 from functools import update_wrapper
-from types import (
-    FunctionType
-)
+
+from types import FunctionType
 
 from slots_factory.tools.SlotsFactoryTools import (
     _slots_factory_hash,
-    _slots_factory_setattrs,
+    _slots_factory_setattrs_slim,
 )
 
 from .initializers import (
-    wrapped_defaults,
-    wrapped_functions,
-    wrapped_not_frozen,
+    wrapped_frozen,
     wrapped_generic,
-    wrapped_slim
+    wrapped_slim,
 )
 
 from .object_model_methods import (
@@ -23,12 +21,16 @@ from .object_model_methods import (
     __len__,
     __eq__,
     __hash__,
-    __iter__
+    __iter__,
 )
 
 
 TYPEDEF_DICT_KEYS = {
-    '__module__', '__annotations__', '__doc__', '__dict__', '__weakref__'
+    "__module__",
+    "__annotations__",
+    "__doc__",
+    "__dict__",
+    "__weakref__",
 }
 
 
@@ -42,7 +44,7 @@ def slots_from_type(type_, **kwargs):
     :rtype: SlotsObject
     """
     instance = type_()
-    _slots_factory_setattrs(instance, kwargs, False)
+    _slots_factory_setattrs_slim(instance, kwargs, False)
     return instance
 
 
@@ -59,11 +61,11 @@ def slots_from_dict(attrs={}, _name="SlotsObject", **kwargs):
     :rtype: SlotsObject
     """
     if not kwargs.get("order"):
-        kwargs['order'] = attrs.keys()
+        kwargs["order"] = attrs.keys()
     type_ = fast_slots.__dict__.get(_name)
     if not type_:
         fast_slots.__dict__[_name] = type_factory(attrs.keys(), _name, **kwargs)
-    return fast_slots(_name, **attrs) 
+    return fast_slots(_name, **attrs)
 
 
 def type_factory(args, _name="Slots_Object", **kwargs):
@@ -85,7 +87,7 @@ def type_factory(args, _name="Slots_Object", **kwargs):
         "__len__": __len__,
         "__eq__": __eq__,
         "__hash__": __hash__,
-        "__repr__": __repr__
+        "__repr__": __repr__,
     }
 
     frozen = kwargs.get("frozen")
@@ -100,9 +102,9 @@ def type_factory(args, _name="Slots_Object", **kwargs):
     if _docs:
         methods.update({"__doc__": _docs})
 
-    _properties = kwargs.get("_properties")
-    if _properties:
-        methods.update(**_properties)
+    _methods = kwargs.get("_methods")
+    if _methods:
+        methods.update(**_methods)
 
     return type(_name, (), methods)
 
@@ -124,7 +126,7 @@ def slots_factory(_name="SlotsObject", **kwargs):
         type_ = type_factory(kwargs.keys(), _name, order=kwargs.keys())
         slots_factory.__dict__[id_] = type_
     instance = type_()
-    _slots_factory_setattrs(instance, kwargs, False)
+    _slots_factory_setattrs_slim(instance, kwargs, False)
     return instance
 
 
@@ -146,7 +148,7 @@ def fast_slots(_name="SlotsObject", **kwargs):
         fast_slots.__dict__[_name] = type_
     try:
         instance = type_()
-        _slots_factory_setattrs(instance, kwargs, True)
+        _slots_factory_setattrs_slim(instance, kwargs, True)
         return instance
     except AttributeError:
         del fast_slots.__dict__[_name]
@@ -166,55 +168,64 @@ def dataslots(_cls=None, **ds_kwargs):
     :return: wrapper functions
     :rtype: function
     """
-
+    
     def wrapper(f):
-        _attrs, _functions, _properties = {}, {}, {}
-        for collection in (f.__annotations__, f.__dict__):
+
+        _attrs, _methods, _callables = {}, {}, {}
+
+        _seen_keys = set()
+        for (attr, collection) in (
+            (attr, getattr(f, attr))
+            for attr in ("__dict__", "__annotations__")
+            if hasattr(f, attr)
+        ):
             for k, v in collection.items():
-                if k in TYPEDEF_DICT_KEYS:
+                if k in TYPEDEF_DICT_KEYS or k in _seen_keys:
                     continue
-                if isinstance(v, FunctionType):
-                    _functions[k] = v
+                if isinstance(v, type) and attr == "__dict__":
+                    _callables[k] = v
+                elif isinstance(v, FunctionType):
+                    if v.__name__ == "<lambda>":
+                        _callables[k] = v
+                    else:
+                        _methods[k] = v
                 elif isinstance(v, property):
-                    _properties[k] = v
+                    _methods[k] = v
                 else:
                     _attrs[k] = v
+                _seen_keys.add(k)
 
-        _keys = _attrs.keys()
         _ds_kwargs = {
             "__doc__": f.__doc__,
-            "_properties": _properties,
+            "_methods": _methods,
             **wrapper.__dict__["ds_kwargs"],
         }
 
         _type = type_factory(
-            list(_keys) + list(_functions.keys()), f.__name__, **_ds_kwargs
+            list(_attrs.keys()) + list(_callables.keys()),
+            f.__name__,
+            **_ds_kwargs
         )
 
-        _defaults = {
-            key: getattr(f, key) for key in _keys if hasattr(f, key)
-        }
+        _defaults = {key: getattr(f, key) for key in _attrs.keys() if hasattr(f, key)}
 
         if not wrapper.__dict__["ds_kwargs"].get("frozen", False):
-            if not _defaults and not _functions:
+            if not (_defaults or _callables):
                 wrapped = wrapped_slim()
-            elif not _functions:
-                wrapped = wrapped_defaults()
-            elif not _defaults:
-                wrapped = wrapped_functions()
             else:
-                wrapped = wrapped_not_frozen()
+                wrapped = wrapped_generic()
         else:
-            wrapped = wrapped_generic()
+            wrapped = wrapped_frozen()
 
         wrapped.__dict__["_type"] = _type
         wrapped.__dict__["_defaults"] = _defaults
-        wrapped.__dict__["_functions"] = _functions
+        wrapped.__dict__["_callables"] = _callables
 
         return update_wrapper(wrapped, f)
-
+    
     wrapper.__dict__["ds_kwargs"] = ds_kwargs
     if _cls is None:
         return wrapper
     return wrapper(_cls)
+
 dataslots.__dict__["from_dict"] = slots_from_dict
