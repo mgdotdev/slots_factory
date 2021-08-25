@@ -199,7 +199,7 @@ static char _slots_factory_setattrs_from_object_docs[] =
 static PyMethodDef SlotsFactoryToolsMethods[] = {
     {"_slots_factory_hash", (PyCFunction)_slots_factory_hash, METH_VARARGS, _slots_factory_hash_docs},
     {"_slots_factory_setattrs", (PyCFunction)_slots_factory_setattrs, METH_VARARGS, _slots_factory_setattrs_docs},
-    {"_slots_factory_setattrs_slim", _slots_factory_setattrs_slim, METH_VARARGS, _slots_factory_setattrs_slim_docs},
+    {"_slots_factory_setattrs_slim", (PyCFunction)_slots_factory_setattrs_slim, METH_VARARGS, _slots_factory_setattrs_slim_docs},
     {"_slots_factory_setattrs_from_object", (PyCFunction)_slots_factory_setattrs_from_object, METH_VARARGS, _slots_factory_setattrs_from_object_docs}, 
     {NULL, NULL, 0, NULL}
 };

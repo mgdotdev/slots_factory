@@ -419,11 +419,86 @@ class TestDerivedObjects:
     def test_derived_dataslots(self):
         @dataslots
         class Base:
-            x: int = 1
+            a: int = lambda: []
+            b: int = 2
+            c = 3
+
+            def this(self):
+                return 1
 
         @dataslots
         class Derived(Base):
-            y: int = 2
+            x: int = 3
+            y: int = 3
+            z = 1
+
+        base = Base()
+        derived = Derived(b=1, y=1)
+        derived.a.append(1)
+
+        assert base.a != derived.a
+
+    def test_multiple_inheritance(self):
+
+        @dataslots
+        class A:
+            a: int = 1
+
+        @dataslots
+        class B:
+            b = list
+
+        @dataslots
+        class C:
+            c: dict = lambda: {}
+
+        @dataslots
+        class Derived(A, B, C):
+            pass
 
         instance = Derived()
-        import pdb; pdb.set_trace()
+        assert all(hasattr(instance, item) for item in ['a', 'b', 'c'])
+
+    def test_inheritance_conflicts(self):
+        @dataslots
+        class A:
+            a: list = lambda: [1,2,3]
+
+        @dataslots
+        class B:
+            a = list
+
+        @dataslots
+        class DerivedOne(A, B):
+            def get_list(self):
+                return self.a
+
+        @dataslots
+        class DerivedTwo(B, A):
+            def get_list(self):
+                return self.a
+
+        instance_one = DerivedOne()
+        instance_two = DerivedTwo()
+
+        assert instance_one.get_list() == [1,2,3]
+        assert instance_two.get_list() == []
+
+
+class TestComposition:
+    def test_compostion(self):
+        @dataslots
+        class SubcomponentOne:
+            x = 1
+
+        @dataslots
+        class SubcomponentTwo:
+            items = lambda: [1, 2, 3]
+
+        @dataslots
+        class RootClass:
+            s1 = SubcomponentOne
+            s2 = SubcomponentTwo
+
+        instance = RootClass()
+        assert repr(instance) == 'RootClass(s1=SubcomponentOne(x=1), s2=SubcomponentTwo(items=[1, 2, 3]))'

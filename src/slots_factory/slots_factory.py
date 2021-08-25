@@ -68,7 +68,7 @@ def slots_from_dict(attrs={}, _name="SlotsObject", **kwargs):
     return fast_slots(_name, **attrs)
 
 
-def type_factory(args, _name="Slots_Object", **kwargs):
+def type_factory(args, _name="Slots_Object", _bases=(), **kwargs):
     """function that returns a new Python type w/ __slots__, and other dunder
     methods if specified.
 
@@ -106,7 +106,7 @@ def type_factory(args, _name="Slots_Object", **kwargs):
     if _methods:
         methods.update(**_methods)
 
-    return type(_name, (), methods)
+    return type(_name, _bases, methods)
 
 
 def slots_factory(_name="SlotsObject", **kwargs):
@@ -205,22 +205,25 @@ def dataslots(_cls=None, **ds_kwargs):
         else:
             __init__ = wrapped_frozen()
 
-        _methods.update({"__init__": __init__})
-
         _ds_kwargs = {
             "__doc__": f.__doc__,
-            "_methods": _methods,
+            "_methods": {
+                "__init__": __init__, 
+                **_methods
+            },
             **wrapper.__dict__["ds_kwargs"],
         }
 
         _type = type_factory(
-            list(_attrs.keys()) + list(_callables.keys()),
-            f.__name__,
+            args=list(_attrs.keys()) + list(_callables.keys()),
+            _name=f.__name__,
+            _bases=(_SlotsBase, ),
             **_ds_kwargs
         )
 
         __init__.__dict__["_defaults"] = _defaults
         __init__.__dict__["_callables"] = _callables
+        __init__.__dict__["_methods"] = _methods
 
         return _type
     
@@ -231,3 +234,26 @@ def dataslots(_cls=None, **ds_kwargs):
     return wrapper(_cls)
 
 dataslots.__dict__["from_dict"] = slots_from_dict
+
+
+class BaseMeta(type):
+    def __new__(cls, name, bases, body):
+        if name != "_SlotsBase":
+            for base in reversed(bases):
+                if base.__name__ == "_SlotsBase":
+                    continue
+                try:
+                    result = {}
+                    for item in base.__slots__:
+                        result[item] = getattr(base, item)
+                    for _, v in base.__init__.__dict__.items():
+                        result.update(v)
+                    body.update(result)
+                except AttributeError:
+                    pass
+        
+        return super().__new__(cls, name, (), body)
+
+
+class _SlotsBase(metaclass=BaseMeta):
+    __slots__ = ()

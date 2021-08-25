@@ -164,7 +164,7 @@ class This:
    z: int
 
 In [2]: %timeit This(x=1, y=2, z=3)
-307 ns ± 7.07 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
+397 ns ± 1.51 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
 
 @dataslots
 class This:
@@ -173,7 +173,7 @@ class This:
    z: int = 3
 
 In [2]: %timeit This()
-275 ns ± 7.07 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
+313 ns ± 1.2 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
 ```
 
 The `@dataslots` decorator allows for users to set default values using standard python syntax, and defaults can be overwritten simply by defining a new value at instantiation. There is no ordering restrictions on default definitions. It's also worth noting that, normally, when writing `__slots__` classes, we can't define class attributes which conflict with the `__slots__` structure that Python creates. However due to the internal mechanics of `@dataslots`, we can set `__slots__` object defaults absent any annotations.
@@ -382,4 +382,64 @@ In [8]: rec_ids.ingest_record(n1)
 
 In [9]: rec_ids.ids
 Out[9]: {0, 5}
+```
+
+
+#### Inheritance and Composition in `@dataslots`
+
+`@dataslots` objects can inherit artifacts from other dataslots. However, given that `@dataslots` is regenerating new datatypes on the fly, it currently doesn't have any concept of method resolution order, nor does it understand the concept of `super()`. A derived class simply updates its default values with preference given to the first base class in queue. Given this, class composition is generally regarded as a better implementation strategy, given `@dataslots`'s compatibility with default type instantiations.
+
+```python
+"""inheritance"""
+@dataslots
+class A:
+    a: list = lambda: [1,2,3]
+
+@dataslots
+class B:
+    a = list
+
+@dataslots
+class DerivedOne(A, B):
+    def get_list(self):
+        return self.a
+
+@dataslots
+class DerivedTwo(B, A):
+    def get_list(self):
+        return self.a
+
+In [1]: instance_one = DerivedOne()
+
+In [2]: instance_two = DerivedTwo()
+
+In [3]: instance_one.get_list()
+Out[3]: [1,2,3]
+
+In [4]: instance_two.get_list()
+Out[4]: []
+```
+
+```python
+"""composition"""
+@dataslots
+class SubcomponentOne:
+    x = 1
+
+@dataslots
+class SubcomponentTwo:
+    x = lambda: [1, 2, 3]
+
+@dataslots
+class RootClass:
+    s1 = SubcomponentOne
+    s2 = SubcomponentTwo
+
+In [1]: instance = RootClass()
+
+In [2]: repr(instance)
+Out[2]: 'RootClass(s1=SubcomponentOne(x=1), s2=SubcomponentTwo(x=[1, 2, 3]))'
+
+In [3]: instance.s2.x
+Out[3]: [1, 2, 3]
 ```
