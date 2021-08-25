@@ -1,4 +1,4 @@
-slot_factory 
+slots_factory
 ===
 
 ## Factory functions and decorators for creating slot objects
@@ -442,4 +442,64 @@ Out[2]: 'RootClass(s1=SubcomponentOne(x=1), s2=SubcomponentTwo(x=[1, 2, 3]))'
 
 In [3]: instance.s2.x
 Out[3]: [1, 2, 3]
+```
+
+## Appendix: Some pure-Python implementations
+
+This module uses custom C extensions for trying to speed up attribute write times. However the inclusion of this requires `slots_factory` to be installed and the extensions compiled. If that seems undesirable, here are some pure-Python implementations that can simply be copied into a codebase.
+
+```python
+
+def slots_factory(_name=None, **kwargs):
+    stores = slots_factory.__dict__
+    _keys = frozenset(kwargs)
+    if _name is None:
+        _id = hash(_keys)
+        _type = stores.get(_id)
+        _name = "SlotsObject"
+    else:
+        _id = hash(_name) ^ hash(_keys)
+        _type = stores.get(_id)
+    if _type:
+        instance = _type()
+    else:
+        def __repr__(self):
+            contents = ", ".join(
+                [f"{key}={getattr(self, key)}" for key in self.__slots__]
+            )
+            return f"{self.__class__.__name__}({contents})"
+        _type = type(
+            _name,
+            (),
+            {"__slots__": _keys, "__repr__": __repr__}
+        )
+        stores[_id] = _type
+        instance = _type()
+    for key, value in kwargs.items():
+        setattr(instance, key, value)
+    return instance
+
+
+def fast_slots(_name="SlotsObject", **kwargs):
+    _type = fast_slots.__dict__.get(_name)
+    if not _type:
+        def __repr__(self):
+            contents = ", ".join(
+                [f"{key}={getattr(self, key)}" for key in self.__slots__]
+            )
+            return f"{self.__class__.__name__}({contents})"
+        _type = type(
+            _name,
+            (),
+            {"__slots__": kwargs.keys(), "__repr__": __repr__}
+        )
+        fast_slots.__dict__[_name] = _type
+    instance = _type()
+    try:
+        for key, value in kwargs.items():
+            setattr(instance, key, value)
+        return instance
+    except AttributeError:
+        del fast_slots.__dict__[_name]
+        return fast_slots(_name, **kwargs)
 ```

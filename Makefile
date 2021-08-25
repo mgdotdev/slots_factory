@@ -1,5 +1,5 @@
 cov:
-	coverage run --source=slots_factory -m pytest ./test/test_slots_factory.py && coverage report -m
+	coverage run --source=slots_factory -m pytest ./test/unit/ && coverage report -m
 
 pub:
 	rm -rf ./build ./dist
@@ -7,7 +7,7 @@ pub:
 	twine upload dist/*
 
 t:
-	pytest ./test/test_slots_factory.py
+	pytest ./test/unit/
 
 b:
-	pytest ./test/test_benchmarks.py
+	pytest ./test/benchmarks

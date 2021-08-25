@@ -1,6 +1,3 @@
-from types import FunctionType
-
-
 def _frozen(self, *_, **__):
     """For setting instances as immutable, via pointing __setattr__ and
     __delattr__ here"""

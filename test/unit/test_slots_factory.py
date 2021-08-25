@@ -12,7 +12,6 @@ from slots_factory import (
 
 from slots_factory.tools.SlotsFactoryTools import (
     _slots_factory_hash,
-    _slots_factory_setattrs,
     _slots_factory_setattrs_slim,
 )
 
