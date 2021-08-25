@@ -1,7 +1,4 @@
-from copy import copy
-from functools import update_wrapper
-
-from types import FunctionType
+from types import new_class, FunctionType
 
 from slots_factory.tools.SlotsFactoryTools import (
     _slots_factory_hash,
@@ -21,7 +18,7 @@ from .object_model_methods import (
     __len__,
     __eq__,
     __hash__,
-    __iter__
+    __iter__,
 )
 
 
@@ -68,7 +65,7 @@ def slots_from_dict(attrs={}, _name="SlotsObject", **kwargs):
     return fast_slots(_name, **attrs)
 
 
-def type_factory(args, _name="Slots_Object", _bases=(), **kwargs):
+def type_factory(args, _name="Slots_Object", _bases=(), _metaclass=type, **kwargs):
     """function that returns a new Python type w/ __slots__, and other dunder
     methods if specified.
 
@@ -87,7 +84,7 @@ def type_factory(args, _name="Slots_Object", _bases=(), **kwargs):
         "__len__": __len__,
         "__eq__": __eq__,
         "__hash__": __hash__,
-        "__repr__": __repr__
+        "__repr__": __repr__,
     }
 
     frozen = kwargs.get("frozen")
@@ -106,7 +103,12 @@ def type_factory(args, _name="Slots_Object", _bases=(), **kwargs):
     if _methods:
         methods.update(**_methods)
 
-    return type(_name, _bases, methods)
+    return new_class(
+        _name,
+        _bases,
+        kwds={"metaclass": _metaclass},
+        exec_body=lambda ns: ns.update(methods),
+    )
 
 
 def slots_factory(_name="SlotsObject", **kwargs):
@@ -168,7 +170,7 @@ def dataslots(_cls=None, **ds_kwargs):
     :return: wrapper functions
     :rtype: function
     """
-    
+
     def wrapper(f):
 
         _attrs, _methods, _callables = {}, {}, {}
@@ -207,17 +209,15 @@ def dataslots(_cls=None, **ds_kwargs):
 
         _ds_kwargs = {
             "__doc__": f.__doc__,
-            "_methods": {
-                "__init__": __init__, 
-                **_methods
-            },
+            "_methods": {"__init__": __init__, **_methods},
             **wrapper.__dict__["ds_kwargs"],
         }
 
         _type = type_factory(
             args=list(_attrs.keys()) + list(_callables.keys()),
             _name=f.__name__,
-            _bases=(_SlotsBase, ),
+            _bases=(),
+            _metaclass=DSMeta,
             **_ds_kwargs
         )
 
@@ -226,34 +226,28 @@ def dataslots(_cls=None, **ds_kwargs):
         __init__.__dict__["_methods"] = _methods
 
         return _type
-    
+
     wrapper.__dict__["ds_kwargs"] = ds_kwargs
 
     if _cls is None:
         return wrapper
     return wrapper(_cls)
 
+
 dataslots.__dict__["from_dict"] = slots_from_dict
 
 
-class BaseMeta(type):
+class DSMeta(type):
     def __new__(cls, name, bases, body):
-        if name != "_SlotsBase":
-            for base in reversed(bases):
-                if base.__name__ == "_SlotsBase":
-                    continue
-                try:
-                    result = {}
-                    for item in base.__slots__:
-                        result[item] = getattr(base, item)
-                    for _, v in base.__init__.__dict__.items():
-                        result.update(v)
-                    body.update(result)
-                except AttributeError:
-                    pass
-        
+        for base in reversed(bases):
+            try:
+                result = {}
+                for item in base.__slots__:
+                    result[item] = getattr(base, item)
+                for _, v in base.__init__.__dict__.items():
+                    result.update(v)
+                body.update(result)
+            except AttributeError:
+                pass
+
         return super().__new__(cls, name, (), body)
-
-
-class _SlotsBase(metaclass=BaseMeta):
-    __slots__ = ()

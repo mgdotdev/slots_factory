@@ -439,7 +439,6 @@ class TestDerivedObjects:
         assert base.a != derived.a
 
     def test_multiple_inheritance(self):
-
         @dataslots
         class A:
             a: int = 1
@@ -457,12 +456,12 @@ class TestDerivedObjects:
             pass
 
         instance = Derived()
-        assert all(hasattr(instance, item) for item in ['a', 'b', 'c'])
+        assert all(hasattr(instance, item) for item in ["a", "b", "c"])
 
     def test_inheritance_conflicts(self):
         @dataslots
         class A:
-            a: list = lambda: [1,2,3]
+            a: list = lambda: [1, 2, 3]
 
         @dataslots
         class B:
@@ -481,7 +480,7 @@ class TestDerivedObjects:
         instance_one = DerivedOne()
         instance_two = DerivedTwo()
 
-        assert instance_one.get_list() == [1,2,3]
+        assert instance_one.get_list() == [1, 2, 3]
         assert instance_two.get_list() == []
 
 
@@ -501,4 +500,8 @@ class TestComposition:
             s2 = SubcomponentTwo
 
         instance = RootClass()
-        assert repr(instance) == 'RootClass(s1=SubcomponentOne(x=1), s2=SubcomponentTwo(items=[1, 2, 3]))'
+
+        assert (
+            repr(instance)
+            == "RootClass(s1=SubcomponentOne(x=1), s2=SubcomponentTwo(items=[1, 2, 3]))"
+        )
