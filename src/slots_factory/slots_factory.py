@@ -93,11 +93,9 @@ def type_factory(args, _name="Slots_Object", _bases=(), _metaclass=type, **kwarg
 
     _order = kwargs.get("order")
     if _order:
-        methods.update(_ordering_methods(args, _order))
-
-    _docs = kwargs.get("__doc__")
-    if _docs:
-        methods.update({"__doc__": _docs})
+        methods.update(
+            _ordering_methods(args, _order)
+        )
 
     _methods = kwargs.get("_methods")
     if _methods:
@@ -208,8 +206,11 @@ def dataslots(_cls=None, **ds_kwargs):
             __init__ = wrapped_frozen()
 
         _ds_kwargs = {
-            "__doc__": f.__doc__,
-            "_methods": {"__init__": __init__, **_methods},
+            "_methods": {
+                "__init__": __init__, 
+                "__doc__": f.__doc__, 
+                **_methods
+            },
             **wrapper.__dict__["ds_kwargs"],
         }
 

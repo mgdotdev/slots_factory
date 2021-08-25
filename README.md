@@ -233,7 +233,7 @@ class This:
 In [1]: this = This(x=1, y=2, z=3)
 
 In [2]: [x for x in this]
-Out[2]: [1, 2, 3]     
+Out[2]: [('x', 1), ('y', 2), ('z', 3)]     
 
 
 @dataslots(order=['x', 'z', 'y'])
@@ -245,7 +245,7 @@ class This:
 In [3]: this = This(x=1, y=2, z=3)
 
 In [4]: [x for x in this]
-Out[4]: [1, 3, 2]  
+Out[4]: [('x', 1), ('z', 3), ('y', 2)] 
 ```
 
 Ordering implies hierarchy, and hierarchy provides a means for rich comparisons. Instances that are ordered can be compared using Python's builtin comparison operators. Comparison is done by applying the respected operator's method as defined on the `self` of the pair of objects, in order, across attributes. Comparison is resolved at first instance of inequality.
