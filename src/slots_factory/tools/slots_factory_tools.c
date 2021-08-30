@@ -56,7 +56,7 @@ static PyObject* _slots_factory_setattrs_slim(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    if (check_flag) {
+    if (check_flag == 1) {
         PyObject *__slots__ = PyObject_GetAttrString(instance, "__slots__");
         if (PyObject_Length(__slots__) != PyObject_Length(kwargs)) {
             return PyErr_Format(PyExc_AttributeError, "Mismatch in number of attributes");
@@ -90,7 +90,7 @@ static PyObject* _slots_factory_setattrs(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    if (check_flag) {
+    if (check_flag == 1) {
         PyObject *__slots__ = PyObject_GetAttrString(instance, "__slots__");
         if (PyObject_Length(__slots__) != PyObject_Length(kwargs)) {
             return PyErr_Format(PyExc_AttributeError, "Mismatch in number of attributes");
