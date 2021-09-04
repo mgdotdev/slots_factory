@@ -142,6 +142,64 @@ class TestDataSlots:
     def test_hash(self, ds):
         assert hash(ds)
 
+    def test_init_methods(self):
+
+        # annotations only -> slim
+        @dataslots
+        class A:
+            x: int
+            y: int
+            z: int
+
+        assert A.__init__.__qualname__.startswith("wrapped_slim")
+
+        @dataslots
+        class B:
+            x: int
+            y: int
+            z: int
+
+            @property
+            def this(self):
+                return self.x + self.y + self.z
+
+        assert B.__init__.__qualname__.startswith("wrapped_slim")
+
+        @dataslots
+        class C:
+            x: int
+            y: int
+            z: int
+
+            def this(self):
+                return self.x + self.y + self.z
+
+        assert C.__init__.__qualname__.startswith("wrapped_slim")
+
+        @dataslots
+        class D:
+            x: int = 1
+            y: int
+            z: int
+
+        assert D.__init__.__qualname__.startswith("wrapped_generic")
+
+        @dataslots
+        class E:
+            x: int = lambda self: self.z + self.y
+            y: int
+            z: int
+
+        assert E.__init__.__qualname__.startswith("wrapped_generic")
+
+        @dataslots(frozen=True)
+        class F:
+            x: int
+            y: int
+            z: int
+
+        assert F.__init__.__qualname__.startswith("wrapped_frozen")
+        
     def test_default_iter(self):
         @dataslots
         class That:

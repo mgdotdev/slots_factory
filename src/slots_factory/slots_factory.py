@@ -1,3 +1,4 @@
+import itertools
 from types import new_class, FunctionType
 
 from slots_factory.tools.SlotsFactoryTools import (
@@ -201,7 +202,7 @@ def dataslots(_cls=None, **ds_kwargs):
         _defaults = {key: getattr(f, key) for key in _attrs.keys() if hasattr(f, key)}
 
         if not wrapper.__dict__["ds_kwargs"].get("frozen", False):
-            if not (_defaults or _callables):
+            if not (_defaults or _callables or _dependents):
                 __init__ = wrapped_slim()
             else:
                 __init__ = wrapped_generic()
@@ -218,7 +219,9 @@ def dataslots(_cls=None, **ds_kwargs):
         }
 
         _type = type_factory(
-            args=list(_attrs.keys()) + list(_callables.keys()) + list(_dependents.keys()),
+            args=list(itertools.chain(
+                _attrs.keys(), _callables.keys(), _dependents.keys()
+            )),
             _name=f.__name__,
             _bases=(),
             _metaclass=DSMeta,
