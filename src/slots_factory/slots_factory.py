@@ -171,7 +171,7 @@ def dataslots(_cls=None, **ds_kwargs):
 
     def wrapper(f):
 
-        _attrs, _methods, _callables = {}, {}, {}
+        _attrs, _methods, _callables, _dependents = {}, {}, {}, {}
 
         _seen_keys = set()
         for (attr, collection) in (
@@ -186,7 +186,10 @@ def dataslots(_cls=None, **ds_kwargs):
                     _callables[k] = v
                 elif isinstance(v, FunctionType):
                     if v.__name__ == "<lambda>":
-                        _callables[k] = v
+                        if  v.__code__.co_argcount == 1:
+                            _dependents[k] = v
+                        else:
+                            _callables[k] = v
                     else:
                         _methods[k] = v
                 elif isinstance(v, property):
@@ -208,14 +211,14 @@ def dataslots(_cls=None, **ds_kwargs):
         _ds_kwargs = {
             "_methods": {
                 "__init__": __init__, 
-                "__doc__": f.__doc__, 
+                "__doc__": f.__doc__,
                 **_methods
             },
             **wrapper.__dict__["ds_kwargs"],
         }
 
         _type = type_factory(
-            args=list(_attrs.keys()) + list(_callables.keys()),
+            args=list(_attrs.keys()) + list(_callables.keys()) + list(_dependents.keys()),
             _name=f.__name__,
             _bases=(),
             _metaclass=DSMeta,
@@ -225,6 +228,7 @@ def dataslots(_cls=None, **ds_kwargs):
         __init__.__dict__["_defaults"] = _defaults
         __init__.__dict__["_callables"] = _callables
         __init__.__dict__["_methods"] = _methods
+        __init__.__dict__["_dependents"] = _dependents
 
         return _type
 

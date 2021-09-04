@@ -444,6 +444,41 @@ In [3]: instance.s2.x
 Out[3]: [1, 2, 3]
 ```
 
+#### Dependent defaults in `@dataslots`
+
+Attributes oftentimes depend on the state of other attributes within an object. This can be tricky when it comes to default values in __slots__, as if you set values at type definition, those attributes become read-only. One solution to this is to define the attribute as a `@property`, so that the `property` has access to the instance when referenced.
+
+`@dataslots` provides a leaner alternative, once again using the `lambda` function as a means for default assignments. lambda functions assigned to attributes can take a single argument, `self`. At instantiation the lambda is called and the resultant is assigned to the instance attribute.
+
+```python
+
+import pymongo
+import redis
+
+from slots_factory import dataslots
+
+@dataslots
+class Redis:
+    queue = redis.Redis(host="redis-queue")
+
+
+@dataslots
+class Mongo:
+    client = pymongo.MongoClient("mongodb://mongo:27017")
+    database = lambda self: self.client.get_database("primary")
+
+
+@dataslots
+class Connections:
+    mongo = Mongo
+    redis = Redis
+
+In [1]: conn = Connections()
+
+In [2]: conn.mongo.database
+Out[2]: Database(MongoClient(host=['mongo:27017'], document_class=dict, tz_aware=False, connect=True), 'primary')
+```
+
 ## Appendix: Some pure-Python implementations
 
 This module uses custom C extensions for trying to speed up attribute write times. However the inclusion of this requires `slots_factory` to be installed and the extensions compiled. If that seems undesirable, here are some pure-Python implementations that can simply be copied into a codebase.

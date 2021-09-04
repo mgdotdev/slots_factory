@@ -21,7 +21,7 @@ def wrapped_generic():
     def __init__(self, **kwargs):
         _data = __init__.__dict__
         _slots_factory_setattrs(
-            self, _data["_callables"], _data["_defaults"], kwargs, False
+            self, _data["_callables"], _data["_defaults"], kwargs, _data["_dependents"], False
         )
 
     return __init__
@@ -34,7 +34,7 @@ def wrapped_frozen():
     def __init__(self, **kwargs):
         _data = __init__.__dict__
         _slots_factory_setattrs_from_object(
-            object, self, _data["_callables"], _data["_defaults"], kwargs
+            object, self, _data["_callables"], _data["_defaults"], kwargs, _data["_dependents"]
         )
 
     return __init__

@@ -83,10 +83,11 @@ static PyObject* _slots_factory_setattrs(PyObject *self, PyObject *args) {
     PyObject *_callables;
     PyObject *_defaults;
     PyObject *kwargs;
+    PyObject *_dependents;
 
     int *check_flag;
 
-    if (!PyArg_ParseTuple(args, "OOOOp", &instance, &_callables, &_defaults, &kwargs, &check_flag)) {
+    if (!PyArg_ParseTuple(args, "OOOOOp", &instance, &_callables, &_defaults, &kwargs, &_dependents, &check_flag)) {
         return NULL;
     }
 
@@ -128,6 +129,16 @@ static PyObject* _slots_factory_setattrs(PyObject *self, PyObject *args) {
         }
     }
 
+    pos = 0;
+    if (PyObject_Length(_dependents) > 0) {
+        while (PyDict_Next(_dependents, &pos, &key, &value)) {
+            value = PyObject_CallFunctionObjArgs(value, instance, NULL);
+            if (PyObject_SetAttr(instance, key, value) == -1) {
+                return PyErr_Format(PyExc_AttributeError, "Cannot set called attribute");
+            }
+        }
+    }
+
     Py_INCREF(Py_None);
     return Py_None;
 }
@@ -139,8 +150,9 @@ static PyObject* _slots_factory_setattrs_from_object(PyObject *self, PyObject *a
     PyObject *_callables;
     PyObject *_defaults;
     PyObject *kwargs;
+    PyObject *_dependents;
 
-    if (!PyArg_ParseTuple(args, "OOOOO", &object, &instance, &_callables, &_defaults, &kwargs)) {
+    if (!PyArg_ParseTuple(args, "OOOOOO", &object, &instance, &_callables, &_defaults, &kwargs, &_dependents)) {
         return NULL;
     }
 
@@ -169,6 +181,16 @@ static PyObject* _slots_factory_setattrs_from_object(PyObject *self, PyObject *a
     pos = 0;
     if (PyObject_Length(kwargs) > 0) {
         while (PyDict_Next(kwargs, &pos, &key, &value)) {
+            if (PyObject_CallMethod(object, "__setattr__", "OOO", instance, key, value) == -1) {
+                return PyErr_Format(PyExc_AttributeError, "Cannot set attribute");
+            }
+        }
+    }
+
+    pos = 0;
+    if (PyObject_Length(_dependents) > 0) {
+        while (PyDict_Next(_dependents, &pos, &key, &value)) {
+            value = PyObject_CallFunctionObjArgs(value, instance, NULL);
             if (PyObject_CallMethod(object, "__setattr__", "OOO", instance, key, value) == -1) {
                 return PyErr_Format(PyExc_AttributeError, "Cannot set attribute");
             }

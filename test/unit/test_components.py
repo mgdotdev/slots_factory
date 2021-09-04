@@ -1,5 +1,3 @@
-import pytest
-
 from slots_factory.slots_factory import DSMeta
 
 class TestMetaClass:

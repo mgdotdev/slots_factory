@@ -504,3 +504,28 @@ class TestComposition:
             repr(instance)
             == "RootClass(s1=SubcomponentOne(x=1), s2=SubcomponentTwo(items=[1, 2, 3]))"
         )
+
+    def test_dependent_defaults(self):
+        @dataslots
+        class SubcomponentOne:
+            x = 1
+
+        @dataslots
+        class SubcomponentTwo:
+            items = lambda: [1, 2, 3]
+
+        @dataslots
+        class RootClass:
+            s1 = SubcomponentOne
+            s2 = SubcomponentTwo
+            items = lambda self: self.s2.items + [self.s1.x]
+            more_items = lambda self: self.items + ['more!']
+
+        instance_one = RootClass()
+        instance_two = RootClass()
+
+        assert instance_one.items == [1, 2, 3, 1]
+        assert instance_two.more_items == [1, 2, 3, 1, 'more!']
+
+        instance_one.items[-1] = 2
+        assert instance_one.items != instance_two.items

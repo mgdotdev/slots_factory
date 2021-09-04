@@ -5,6 +5,7 @@ venv/
 .pytest_cache/
 .tox/
 
+.local/
 .notes
 
 src/*.egg-info
