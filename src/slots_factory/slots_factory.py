@@ -1,16 +1,14 @@
 import itertools
 from types import new_class, FunctionType
 
+
 from slots_factory.tools.SlotsFactoryTools import (
     _slots_factory_hash,
+    _slots_factory_setattrs,
     _slots_factory_setattrs_slim,
+    _slots_factory_setattrs_from_object,
 )
 
-from .initializers import (
-    wrapped_frozen,
-    wrapped_generic,
-    wrapped_slim,
-)
 
 from .object_model_methods import (
     _frozen,
@@ -79,6 +77,7 @@ def type_factory(args, _name="Slots_Object", _bases=(), _metaclass=type, **kwarg
     :return: type definition defined by function arguments
     :rtype: type
     """
+
     methods = {
         "__slots__": args,
         "__iter__": __iter__,
@@ -90,7 +89,8 @@ def type_factory(args, _name="Slots_Object", _bases=(), _metaclass=type, **kwarg
 
     frozen = kwargs.get("frozen")
     if frozen:
-        methods.update({"__setattr__": _frozen, "__delattr__": _frozen})
+        methods["__setattr__"] = _frozen
+        methods["__delattr__"] = _frozen
 
     _order = kwargs.get("order")
     if _order:
@@ -171,7 +171,7 @@ def dataslots(_cls=None, **ds_kwargs):
     """
 
     def wrapper(f):
-
+        """wrapper called to generate the type at runtime"""
         _attrs, _methods, _callables, _dependents = {}, {}, {}, {}
 
         _seen_keys = set()
@@ -187,10 +187,16 @@ def dataslots(_cls=None, **ds_kwargs):
                     _callables[k] = v
                 elif isinstance(v, FunctionType):
                     if v.__name__ == "<lambda>":
-                        if  v.__code__.co_argcount == 1:
+                        if v.__code__.co_argcount == 1:
                             _dependents[k] = v
-                        else:
+                        elif v.__code__.co_argcount == 0:
                             _callables[k] = v
+                        else:
+                            raise SyntaxError(
+                                "lambda-type factory functions"
+                                " must take either 'self' as an argument,"
+                                " or take no arguments"
+                            )
                     else:
                         _methods[k] = v
                 elif isinstance(v, property):
@@ -201,13 +207,24 @@ def dataslots(_cls=None, **ds_kwargs):
 
         _defaults = {key: getattr(f, key) for key in _attrs.keys() if hasattr(f, key)}
 
-        if not wrapper.__dict__["ds_kwargs"].get("frozen", False):
+        if not getattr(wrapper, "ds_kwargs", False):
             if not (_defaults or _callables or _dependents):
-                __init__ = wrapped_slim()
+                def __init__(self, **kwargs):
+                    """slim"""
+                    _slots_factory_setattrs_slim(self, kwargs, False)
             else:
-                __init__ = wrapped_generic()
+                def __init__(self, **kwargs):
+                    """generic"""
+                    _slots_factory_setattrs(
+                        self, _callables, _defaults, kwargs, _dependents, False
+                    )
         else:
-            __init__ = wrapped_frozen()
+            def __init__(self, **kwargs):
+                """frozen"""
+                _slots_factory_setattrs_from_object(
+                    object, self, _callables, _defaults, kwargs, _dependents
+                )
+
 
         _ds_kwargs = {
             "_methods": {
@@ -241,11 +258,11 @@ def dataslots(_cls=None, **ds_kwargs):
         return wrapper
     return wrapper(_cls)
 
-
 dataslots.__dict__["from_dict"] = slots_from_dict
 
 
 class DSMeta(type):
+    """handles 'inheritance' (by stealing, not inheriting)"""
     def __new__(cls, name, bases, body):
         for base in reversed(bases):
             try:

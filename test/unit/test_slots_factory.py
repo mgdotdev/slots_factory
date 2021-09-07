@@ -151,7 +151,7 @@ class TestDataSlots:
             y: int
             z: int
 
-        assert A.__init__.__qualname__.startswith("wrapped_slim")
+        assert A.__init__.__doc__ == "slim"
 
         @dataslots
         class B:
@@ -163,7 +163,7 @@ class TestDataSlots:
             def this(self):
                 return self.x + self.y + self.z
 
-        assert B.__init__.__qualname__.startswith("wrapped_slim")
+        assert B.__init__.__doc__ == "slim"
 
         @dataslots
         class C:
@@ -174,7 +174,7 @@ class TestDataSlots:
             def this(self):
                 return self.x + self.y + self.z
 
-        assert C.__init__.__qualname__.startswith("wrapped_slim")
+        assert C.__init__.__doc__ == "slim"
 
         @dataslots
         class D:
@@ -182,7 +182,7 @@ class TestDataSlots:
             y: int
             z: int
 
-        assert D.__init__.__qualname__.startswith("wrapped_generic")
+        assert D.__init__.__doc__ == "generic"
 
         @dataslots
         class E:
@@ -190,7 +190,7 @@ class TestDataSlots:
             y: int
             z: int
 
-        assert E.__init__.__qualname__.startswith("wrapped_generic")
+        assert E.__init__.__doc__ == "generic"
 
         @dataslots(frozen=True)
         class F:
@@ -198,7 +198,7 @@ class TestDataSlots:
             y: int
             z: int
 
-        assert F.__init__.__qualname__.startswith("wrapped_frozen")
+        assert F.__init__.__doc__ == "frozen"
         
     def test_default_iter(self):
         @dataslots
@@ -483,6 +483,15 @@ class TestDerivedObjects:
             def this(self):
                 return 1
 
+            @property
+            def that(self):
+                return self.c
+
+            @that.setter
+            def that(self, value):
+                self.c = value
+
+
         @dataslots
         class Derived(Base):
             x: int = 3
@@ -587,3 +596,14 @@ class TestComposition:
 
         instance_one.items[-1] = 2
         assert instance_one.items != instance_two.items
+
+    def test_dependent_defaults_error(self):
+        with pytest.raises(SyntaxError) as e:
+            @dataslots
+            class This:
+                x = lambda bad, very_bad: False
+
+        assert e.value.args == (
+            "lambda-type factory functions must take either"
+            " 'self' as an argument, or take no arguments",
+        )

@@ -139,16 +139,6 @@ In [6]: %timeit instance = slots_from_type(type_, x=1, y=2, z=3)
 323 ns ± 10.4 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
 ```
 
-`slots_from_type` is a convenience function; you can also instantiate your own instance and then pass it through the underlying `_slots_factory_setattrs` function, which is what actually populates the attributes.
-
-```python
-from slots_factory import type_factory
-from slots_factory.tools.SlotsFactoryTools import _slots_factory_setattrs
-
-my_type = type_factory(['x', 'y', 'z'], _name="SlotsObject")
-instance = my_type()
-_slots_factory_setattrs(my_type, {'x': 1, 'y': 2, 'z': 3})
-```
 
 ### @dataslots
 
@@ -173,7 +163,7 @@ class This:
    z: int = 3
 
 In [2]: %timeit This()
-313 ns ± 1.2 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
+261 ns ± 1.2 ns per loop (mean ± std. dev. of 7 runs, 1000000 loops each)
 ```
 
 The `@dataslots` decorator allows for users to set default values using standard python syntax, and defaults can be overwritten simply by defining a new value at instantiation. There is no ordering restrictions on default definitions. It's also worth noting that, normally, when writing `__slots__` classes, we can't define class attributes which conflict with the `__slots__` structure that Python creates. However due to the internal mechanics of `@dataslots`, we can set `__slots__` object defaults absent any annotations.
@@ -485,19 +475,16 @@ This module uses custom C extensions for trying to speed up attribute write time
 
 ```python
 
-def slots_factory(_name=None, **kwargs):
+def slots_factory(_name="SlotsObject", **kwargs):
     stores = slots_factory.__dict__
     _keys = frozenset(kwargs)
-    if _name is None:
+    if _name == "SlotsObject":
         _id = hash(_keys)
         _type = stores.get(_id)
-        _name = "SlotsObject"
     else:
         _id = hash(_name) ^ hash(_keys)
         _type = stores.get(_id)
-    if _type:
-        instance = _type()
-    else:
+    if not _type:
         def __repr__(self):
             contents = ", ".join(
                 [f"{key}={getattr(self, key)}" for key in self.__slots__]
@@ -509,7 +496,7 @@ def slots_factory(_name=None, **kwargs):
             {"__slots__": _keys, "__repr__": __repr__}
         )
         stores[_id] = _type
-        instance = _type()
+    instance = _type()
     for key, value in kwargs.items():
         setattr(instance, key, value)
     return instance
