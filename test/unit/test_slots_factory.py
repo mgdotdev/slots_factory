@@ -11,6 +11,7 @@ from slots_factory import (
 
 
 from slots_factory.tools.SlotsFactoryTools import (
+    _factory,
     _slots_factory_hash,
     _slots_factory_setattrs_slim,
 )
@@ -119,6 +120,16 @@ class TestSlotsFromType:
         assert instance.z == 3
 
 
+class TestFactory:
+    def test_factory(self):
+        class Type:
+            __slots__ = ('x', 'y', 'z')
+        instance = _factory(Type, 1, 2, 3)
+        assert instance.x == 1
+        assert instance.y == 2
+        assert instance.z == 3
+
+        
 class TestTypeFactory:
     def test_type_factory(self):
         args = ("x", "y")

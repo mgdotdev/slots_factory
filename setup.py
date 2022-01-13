@@ -4,8 +4,8 @@ from setuptools import setup, find_packages, Extension
 
 extensions = [
     Extension(
-        "slots_factory.tools.SlotsFactoryTools",
-        [os.path.join("src", "slots_factory", "tools", "slots_factory_tools.c")],
+        "slots_factory.tools._slots_factory_tools",
+        [os.path.join("src", "slots_factory", "tools", "_slots_factory_tools.c")],
     )
 ]
 

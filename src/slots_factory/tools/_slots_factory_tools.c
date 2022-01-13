@@ -1,6 +1,14 @@
 #include <Python.h>
 
 
+typedef struct {
+    PyObject ob_head;
+    PyObject *ob_items[1];
+} ItemStruct;
+
+#define PyObject_ITEMS(op) (((ItemStruct*)op)->ob_items)
+
+
 unsigned long hash(unsigned char *str) {
     unsigned long value = 5381;
     int c;
@@ -9,6 +17,27 @@ unsigned long hash(unsigned char *str) {
         value = ((value << 5) + value) + c;
     }
     return value;
+}
+
+
+PyObject* _factory(PyObject *self, PyObject *args) {
+    PyTupleObject *_arg_tuple = (PyTupleObject *)args;
+
+    Py_ssize_t args_length = PyTuple_GET_SIZE(_arg_tuple)-1;
+
+    PyTypeObject* cls = PyTuple_GET_ITEM(_arg_tuple, 0);
+    PyObject* instance = cls->tp_alloc(cls, 0);
+
+    PyObject * const*_args = (PyObject * const*)&_arg_tuple->ob_item[1];
+    const PyObject **items = (const PyObject**)PyObject_ITEMS(instance);
+
+    for (Py_ssize_t i=0; i<args_length; i++) {
+        PyObject *v = _args[i];
+        Py_IncRef(v);
+        items[i] = v;
+    }
+    
+    return instance;
 }
 
 
@@ -201,6 +230,9 @@ static PyObject* _slots_factory_setattrs_from_object(PyObject *self, PyObject *a
     return Py_None;
 }
 
+static char _factory_docs[] = 
+    "use intrinsic properties of tuples for faster type instantiation and allocation.";
+
 
 static char _slots_factory_hash_docs[] = 
     "compute a hash as fast as possible.";
@@ -219,6 +251,7 @@ static char _slots_factory_setattrs_from_object_docs[] =
 
 
 static PyMethodDef SlotsFactoryToolsMethods[] = {
+    {"_factory", (PyCFunction)_factory, METH_VARARGS, _factory_docs},
     {"_slots_factory_hash", (PyCFunction)_slots_factory_hash, METH_VARARGS, _slots_factory_hash_docs},
     {"_slots_factory_setattrs", (PyCFunction)_slots_factory_setattrs, METH_VARARGS, _slots_factory_setattrs_docs},
     {"_slots_factory_setattrs_slim", (PyCFunction)_slots_factory_setattrs_slim, METH_VARARGS, _slots_factory_setattrs_slim_docs},
